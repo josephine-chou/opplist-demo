@@ -1,0 +1,20 @@
+{
+  "note": "Invented sample truck thread, mail 1 of 3: the trucker pushes back on a liftgate at the delivery end.",
+  "subject": "RE: Dayton OH - Knoxville TN / dry van dispatch",
+  "sender_name": "Nora Whitfield",
+  "sender_address": "nwhitfield@ridgeback-transport.example",
+  "sender_internal": false,
+  "received_on": "2026-09-22",
+  "received_at": "2026-09-22 17:48",
+  "to_addresses": [
+    "EricLo@jojofreight.example"
+  ],
+  "cc_addresses": [
+    "VictorLang@jojofreight.example"
+  ],
+  "display_to": "JJC-ERIC LO",
+  "conversation_id": "CONV-TRUCK-SAMPLE",
+  "entry_id": "ENTRY-TRUCK-0922",
+  "message_id": "<truck-liftgate-0922@ridgeback-transport.example>",
+  "body": "Eric,\r\n\r\nOur price only covers a liftgate on the pickup side; nobody asked us for a liftgate at the Knoxville end, and they have a dock there, so we won't add one for this money.\r\n\r\nNora\r\n"
+}

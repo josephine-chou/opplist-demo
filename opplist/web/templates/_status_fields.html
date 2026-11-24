@@ -1,0 +1,98 @@
+{# The fields of the Status card's actions (Quoted, Re-quoted, Won, Lost,
+   Cancelled, Note): one definition, rendered by the case page's action forms
+   and by a suggestion's Edit (E1), prefilled from `v` (at, note, reason,
+   rate_used; W2b: rate_party and rate_request, a Won from the team site). `idp` keeps ids apart when several copies are on a page.
+   Needs the case page's context: live_routes, closed_reasons_*,
+   requote_reasons, rate_used_choices, vendors, all_parties, offices,
+   carriers. #}
+{% macro rate_used_fields(prefix, current, party_id, note, request_id=none, hint=none) %}
+  <div class="rate-used" id="{{ prefix }}rate-used">
+    {% for value, label in rate_used_choices %}
+      <label class="tag"><input type="radio" name="rate_used" value="{{ value }}"
+        {% if current == value %}checked{% endif %}> {{ label }}</label>
+    {% endfor %}
+    <div class="rate-used-picks">
+      <select name="awarded_vendor_request" data-for="agent" aria-label="{{ t.rate_used_pick_request }}">
+        <option value="">{{ t.rate_used_pick_request }}</option>
+        {% for v in vendors if not v.voided %}
+          <option value="{{ v.id }}" {% if (request_id and v.id == request_id) or (not request_id and v.awarded) %}selected{% endif %}>{{ v.vendor_key }}</option>
+        {% endfor %}
+      </select>
+      <select name="agent_party_id" data-for="agent" aria-label="{{ t.rate_used_pick_party }}">
+        <option value="">{{ t.rate_used_pick_party }}</option>
+        {% for p in all_parties %}
+          <option value="{{ p.id }}" {% if current == 'agent' and party_id == p.id %}selected{% endif %}>{{ p.key }}</option>
+        {% endfor %}
+      </select>
+      <select name="office_party_id" data-for="office" aria-label="{{ t.rate_used_pick_office }}">
+        <option value="">{{ t.rate_used_pick_office }}</option>
+        {% for p in offices %}
+          <option value="{{ p.id }}" {% if current == 'office' and party_id == p.id %}selected{% endif %}>{{ p.key }}</option>
+        {% endfor %}
+      </select>
+      <select name="carrier_party_id" data-for="carrier" aria-label="{{ t.rate_used_pick_carrier }}">
+        <option value="">{{ t.rate_used_pick_carrier }}</option>
+        {% for p in carriers %}
+          <option value="{{ p.id }}" {% if current == 'carrier' and party_id == p.id %}selected{% endif %}>{{ p.key }}</option>
+        {% endfor %}
+      </select>
+      <input name="awarded_note" value="{{ note or '' }}" placeholder="{{ t.note }}">
+      {# Q3: where the start came from: 'from Quote 2 (Freight: Harrow Lines)' #}
+      {% if hint %}<span class="muted small rate-hint">{{ hint }}</span>{% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro reason_select(name, reasons, current, hints={}) %}
+  <select name="{{ name }}"><option value="">-</option>
+    {% for r in reasons %}<option value="{{ r }}"{% if hints.get(r) %} title="{{ hints[r] }}"{% endif %}{% if current == r %} selected{% endif %}>{{ r }}</option>{% endfor %}</select>
+{% endmacro %}
+
+{% macro act_fields(action, v, idp='') %}
+  {% set at = v.get('at') or today %}
+  {% if action == 'quoted' %}
+    <div class="row"><label class="f"><span>{{ t.sent_on }}</span><input type="date" name="at" value="{{ at }}" required></label>
+      <label class="f grow"><span>{{ t.note }}</span><input name="note" value="{{ v.get('note') or '' }}"></label></div>
+  {% elif action == 'requoted' %}
+    <div class="row"><label class="f"><span>{{ t.sent_on }}</span><input type="date" name="at" value="{{ at }}" required></label>
+      <label class="f"><span>{{ t.why }}</span>{{ reason_select('requote_reason', requote_reasons, v.get('reason')) }}</label>
+      <label class="f grow"><span>{{ t.note }}</span><input name="note" value="{{ v.get('note') or '' }}"></label></div>
+  {% elif action == 'won' %}
+    {% set open_routes = live_routes|rejectattr('result')|list %}
+    {% if live_routes|length > 1 and open_routes %}
+      {# v33: which routes were won; an unticked route with a reason
+         lost, without one it keeps no result #}
+      <input type="hidden" name="routes_present" value="1">
+      <div class="h">{{ t.which_routes_won }}</div>
+      {% for r in open_routes %}
+        <div class="wr won-route" data-route="{{ r.id }}">
+          <span class="rl">{{ r.letter }}</span>
+          <label><input type="checkbox" name="won_route" value="{{ r.id }}" checked> {{ r.to }}</label>
+          <select name="lost_reason_{{ r.id }}" aria-label="{{ t.route_lost_because.format(r.letter) }}" disabled>
+            <option value="">{{ t.no_result }}</option>
+            <optgroup label="{{ t.act_lost }}">{% for rsn in closed_reasons_lost %}<option value="{{ rsn }}">{{ rsn }}</option>{% endfor %}</optgroup>
+            <optgroup label="{{ t.act_cancelled }}">{% for rsn in closed_reasons_cancelled %}<option value="Cancelled|{{ rsn }}">{{ rsn }}</option>{% endfor %}</optgroup>
+          </select>
+        </div>
+      {% endfor %}
+    {% endif %}
+    <div class="row"><label class="f"><span>{{ t.won_on }}</span><input type="date" name="at" value="{{ at }}" required></label></div>
+    <div class="row"><div class="f grow"><span>{{ t.who_won }}</span>
+      {{ rate_used_fields(idp or 'new-', v.get('rate_used') or 'own', v.get('rate_party'), '', v.get('rate_request'), v.get('rate_hint')) }}</div></div>
+    <div class="row"><label class="f grow"><span>{{ t.note }}</span><input name="note" value="{{ v.get('note') or '' }}"></label></div>
+  {% elif action == 'lost' %}
+    {% set hints = {'Price too high': t.hint_price_too_high, 'Went with another forwarder': t.hint_another_forwarder} %}
+    <div class="row"{% if not idp %} id="lost-price-wrap"{% endif %}><label class="f"><span>{{ t.lost_on }}</span><input type="date" name="at" value="{{ at }}" required></label>
+      <label class="f"><span>{{ t.why }}</span>{{ reason_select('closed_reason', closed_reasons_lost, v.get('reason'), hints) }}</label>
+      <label class="f"><span>{{ t.their_price }}</span><input name="lost_their_price" placeholder="{{ t.their_price_ph }}" value="{{ v.get('their_price') or '' }}"></label>
+      <label class="f"><span>{{ t.our_price }}</span><input name="lost_our_price" placeholder="{{ t.our_price_ph }}" value="{{ v.get('our_price') or '' }}"></label></div>
+    <div class="row"><label class="f grow"><span>{{ t.what_we_heard }}</span><input name="note" value="{{ v.get('note') or '' }}"></label></div>
+  {% elif action == 'cancelled' %}
+    <div class="row"><label class="f"><span>{{ t.cancelled_on }}</span><input type="date" name="at" value="{{ at }}" required></label>
+      <label class="f"><span>{{ t.why }}</span>{{ reason_select('closed_reason', closed_reasons_cancelled, v.get('reason')) }}</label></div>
+    <div class="row"><label class="f grow"><span>{{ t.what_we_heard }}</span><input name="note" value="{{ v.get('note') or '' }}"></label></div>
+  {% elif action == 'note' %}
+    <div class="row"><label class="f"><span>{{ t.date }}</span><input type="date" name="at" value="{{ at }}" required></label>
+      <label class="f grow"><span>{{ t.note }}</span><input name="note" value="{{ v.get('note') or '' }}" required></label></div>
+  {% endif %}
+{% endmacro %}

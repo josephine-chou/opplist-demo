@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}{{ t.nav_export }}{% endblock %}
+{% block content %}
+<h1>{{ t.nav_export }}</h1>
+
+<div class="banner {% if mode == 'publish' %}banner-live{% endif %}">
+  {% if mode == 'publish' %}
+    <strong>{{ t.target_publish }}</strong>
+    {{ t.target_publish_note }}
+  {% else %}
+    <strong>{{ t.target_preview }}</strong>
+    {{ t.target_preview_note }}
+  {% endif %}
+  <a href="{{ url_for('settings') }}">{{ t.change_in_settings }}</a>
+</div>
+
+<table class="grid">
+  <thead><tr><th>File</th><th>Written</th><th>Size</th></tr></thead>
+  <tbody>
+  {% for f in files %}
+    <tr>
+      <td class="mono">{{ f.path }}</td>
+      <td class="mono">{{ f.when or '-' }}</td>
+      <td class="mono">{{ '{:,}'.format(f.size) if f.size is not none else t.never_written }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="row-form">
+  <form method="post" action="{{ url_for('export_run') }}">
+    <button class="button primary" type="submit">{{ t.export_now }}</button>
+  </form>
+  {% if mode != 'publish' %}
+    <form method="post" action="{{ url_for('export_run') }}"
+          onsubmit="return confirm('{{ t.publish_confirm }}');">
+      <input type="hidden" name="mode" value="publish">
+      <button class="button" type="submit">{{ t.publish_once }}</button>
+    </form>
+  {% endif %}
+  <form method="post" action="{{ url_for('export_backup') }}">
+    <button class="button" type="submit">{{ t.backup_now }}</button>
+  </form>
+  <a class="button" href="{{ url_for('check_page') }}">{{ t.run_check }}</a>
+</div>
+
+<p class="muted">
+  {{ t.auto_export }}:
+  {% if not auto_on %}{{ t.auto_off }}
+  {% elif mode != 'publish' %}{{ t.auto_idle }}
+  {% elif auto_pending %}{{ t.auto_pending }}
+  {% else %}{{ t.auto_on }}{% endif %}
+  {% if share_dir %}&middot; share copy to <span class="mono">{{ share_dir }}</span>{% endif %}
+</p>
+<p class="muted" id="export-auto-csv">{{ t.export_auto_csv }}</p>
+{% if auto_error %}<p class="err-box">Last auto export failed: {{ auto_error }}</p>{% endif %}
+
+<section class="panel">
+  <h2>{{ t.nav_report }}</h2>
+  <form method="post" action="{{ url_for('export_report') }}" class="row-form">
+    <label>{{ t.export_report_month }}
+      <select name="month">
+        {% for m in report_months %}<option value="{{ m }}" {% if m == report_month %}selected{% endif %}>{{ m }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="button" name="kind" value="html" type="submit">{{ t.export_report_html }}</button>
+    <button class="button" name="kind" value="pdf" type="submit">{{ t.export_report_pdf }}</button>
+    <button class="button" name="kind" value="xlsx" type="submit">{{ t.export_report_xlsx }}</button>
+  </form>
+  <table class="grid tight">
+    <tbody>{% for f in report_files %}
+      <tr><td class="mono">{{ f.path }}</td><td class="mono">{{ f.when or '-' }}</td>
+          <td class="mono">{{ '{:,}'.format(f.size) if f.size is not none else t.never_written }}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>{{ t.restore_points }}</h2>
+  {% if restore_points %}
+  <table class="grid tight">
+    <tbody>{% for f in restore_points %}
+      <tr><td class="mono">{{ f.path.name }}</td><td class="mono">{{ f.when }}</td>
+          <td class="mono">{{ '{:,}'.format(f.size) if f.size is not none else '' }}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  <p class="muted">{{ t.restore_note }}</p>
+  {% else %}<p class="muted">None yet.</p>{% endif %}
+</section>
+{% endblock %}

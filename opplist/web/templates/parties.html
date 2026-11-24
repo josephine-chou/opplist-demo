@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_sortable.html" import sortable %}
+{% set kept = filters.to_dict() if filters else {} %}
+{% block title %}{{ t.nav_parties }}{% endblock %}
+{% block content %}
+<h1>{{ t.nav_parties }} <span class="count">{{ rows|length }}</span></h1>
+
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ query }}"
+         placeholder="key, name, domain, contact">
+  <select name="type">
+    <option value="">Type</option>
+    {% for ty in party_types %}
+      <option value="{{ ty }}" {% if filters.get('type') == ty %}selected{% endif %}>{{ ty }}</option>
+    {% endfor %}
+  </select>
+  <select name="region">
+    <option value="">Region</option>
+    {% for r in regions %}
+      <option value="{{ r }}" {% if filters.get('region') == r %}selected{% endif %}>{{ r }}</option>
+    {% endfor %}
+  </select>
+  <select name="stage">
+    <option value="">{{ t.party_stage }}</option>
+    {% for s in ['prospect','contacted','active','dormant'] %}
+      <option value="{{ s }}" {% if filters.get('stage') == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <select name="group">
+    <option value="">{{ t.party_group }}</option>
+    {% for g in groups %}
+      <option value="{{ g.key }}" {% if (filters.get('group') or '')|upper == g.key %}selected{% endif %}>{{ g.key }}</option>
+    {% endfor %}
+  </select>
+  <label class="tag"><input type="checkbox" name="mfn" value="1"
+    {% if filters.get('mfn') == '1' %}checked{% endif %}> MFN</label>
+  <button class="button" type="submit">{{ t.filter }}</button>
+  <a class="button" href="{{ url_for('parties') }}">{{ t.clear_filters }}</a>
+  <a class="button" href="{{ url_for('parties_duplicates') }}">{{ t.possible_duplicates }}</a>
+</form>
+
+{% if rows %}
+<table class="grid">
+  <thead><tr>
+    {{ sortable('key', 'Key', sort, dir, kept) }}
+    {{ sortable('type', 'Type', sort, dir, kept) }}
+    {{ sortable('country', 'Country', sort, dir, kept) }}
+    {{ sortable('region', 'Region', sort, dir, kept) }}
+    {{ sortable('stage', t.party_stage, sort, dir, kept) }}
+    <th>{{ t.party_group }}</th>
+    {{ sortable('mfn_member', 'MFN', sort, dir, kept) }}
+    {{ sortable('total_enquiries', 'Inquiries', sort, dir, kept) }}
+    {{ sortable('last_activity_on', t.last_activity, sort, dir, kept) }}
+    <th>{{ t.next_touch }}</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    {% set due = r.last_activity_on and (r.last_activity_on|next_touch(r.cadence_days or cadence_default)) %}
+    <tr onclick="location='{{ url_for('party', party_id=r.id) }}'">
+      <td><a href="{{ url_for('party', party_id=r.id) }}">{{ r.key }}</a>
+        {% if r.placeholder %}<span class="pill warn">{{ t.placeholder_badge }}</span>{% endif %}</td>
+      <td>{{ r.type }}</td><td>{{ r.country or '' }}</td><td>{{ r.region or '' }}</td>
+      <td>{{ r.stage }}</td>
+      <td>{% if r.group_key %}<a href="{{ url_for('parties', group=r.group_key) }}">{{ r.group_key }}</a>{% endif %}</td>
+      <td>{{ 'Y' if r.mfn_member == 1 else '' }}</td>
+      <td class="mono">{{ r.total_enquiries }}</td>
+      <td class="mono">{{ r.last_activity_on|nice_date }}</td>
+      <td class="mono {% if due and due < today %}overdue{% endif %}">{{ due or '' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<p class="muted">{{ t.empty_parties }}</p>{% endif %}
+{% endblock %}

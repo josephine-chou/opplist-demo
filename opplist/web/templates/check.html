@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ t.nav_check }}{% endblock %}
+{% block content %}
+<h1>{{ t.nav_check }}</h1>
+<p class="muted">{{ t.check_lead }}</p>
+
+{% for f in findings %}
+  <section class="panel finding {% if f.clean %}clean{% elif f.informational %}info{% else %}look{% endif %}">
+    <h2>
+      <span class="pill {% if f.clean %}ok{% elif f.informational %}{% else %}warn{% endif %}">{{ f.count }}</span>
+      {{ f.title }}
+    </h2>
+    {% if f.note %}<p class="muted">{{ f.note }}</p>{% endif %}
+    {% if f.rows %}
+      <table class="grid tight">
+        <thead><tr>{% for key in f.rows[0].keys() %}<th>{{ key }}</th>{% endfor %}</tr></thead>
+        <tbody>
+        {% for row in f.rows[:50] %}
+          <tr>{% for key, value in row.items() %}
+            <td class="mono">
+              {% if key == 'opp_no' %}<a href="{{ url_for('enquiries', view='all', q=value) }}">{{ value }}</a>
+              {% else %}{{ value if value is not none else '' }}{% endif %}
+            </td>
+          {% endfor %}</tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% if f.rows|length > 50 %}
+        <p class="muted">... and {{ f.rows|length - 50 }} more</p>
+      {% endif %}
+    {% endif %}
+  </section>
+{% endfor %}
+{% endblock %}

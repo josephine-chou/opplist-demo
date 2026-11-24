@@ -1,0 +1,18 @@
+{
+  "note": "Invented sample truck thread, mail 3 of 3: the broker takes the carrier off the load and assigns another truck; the quoted question below mentions a delivery and must not count.",
+  "subject": "RE: Dayton OH - Knoxville TN / dry van dispatch",
+  "sender_name": "Nora Whitfield",
+  "sender_address": "nwhitfield@ridgeback-transport.example",
+  "sender_internal": false,
+  "received_on": "2026-09-23",
+  "received_at": "2026-09-23 10:02",
+  "to_addresses": [
+    "EricLo@jojofreight.example"
+  ],
+  "cc_addresses": [],
+  "display_to": "JJC-ERIC LO",
+  "conversation_id": "CONV-TRUCK-SAMPLE",
+  "entry_id": "ENTRY-TRUCK-0923B",
+  "message_id": "<truck-replaced-0923@ridgeback-transport.example>",
+  "body": "Eric,\r\n\r\nWe took that carrier off the load after he gave us a false position. Another truck is being assigned right now; we are unable to promise a time until it is moving.\r\n\r\nNora\r\n\r\nOn Sep 23, 2026 at 9:40 AM Eric Lo wrote:\r\n> Any update on timing? The receiver says a similar order was delivered to them last week by someone else.\r\n"
+}

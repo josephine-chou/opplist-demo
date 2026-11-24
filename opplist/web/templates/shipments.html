@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ t.nav_shipments }}{% endblock %}
+{% block main_class %}case-page{% endblock %}
+{% block content %}
+{# The shipments list: one row per shipment, the quietest first. #}
+<div class="crumbs"><b>{{ t.nav_shipments }}</b></div>
+<div class="chips">
+  {% for key, label in [('active', t.ship_filter_active), ('delivered', t.ship_filter_delivered), ('all', t.ship_filter_all)] %}
+    <a class="{{ 'on' if which == key else '' }}" href="{{ url_for('shipments_page', show=key) }}">{{ label }}</a>
+  {% endfor %}
+</div>
+<section class="card">
+  {% if rows %}
+  <table class="tbl ships">
+    <thead><tr><th>Lane</th><th>Mode</th><th>Requester</th><th>Milestone</th><th>ETA</th><th>Open issue</th><th>Quiet</th><th>Last event</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><a href="{{ url_for('shipment_page', shipment_id=r.id) }}"><b>{{ r.title }}</b></a> <span class="muted small mono">{{ r.opp_no }}</span></td>
+        <td><span class="pill p-mode">{{ r.mode_label }}</span></td>
+        <td>{{ r.requester }}</td>
+        <td><span class="pill p-transit">{{ r.current }}</span>{% if r.closed %} <span class="pill muted-pill">closed</span>{% endif %}</td>
+        <td class="mono nowrap">{{ r.eta|day if r.eta else '-' }}</td>
+        <td class="{{ 'issue' if r.issue else 'muted' }}">{{ r.issue or '-' }}</td>
+        <td class="mono">{% if r.days is not none %}{{ r.days }} d{% else %}-{% endif %}</td>
+        <td class="muted">{{ r.last or '-' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">{{ t.ship_none.format(which=which if which != 'all' else 'yet') }}</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,36 @@
+{# The cheat sheet (batch 17c): the Report page's second tab,
+   sample v2. Printed from the browser; nothing is written to a file. #}
+{% macro n(v) %}{{ v if v else '' }}{% endmacro %}
+<section class="page cs"><h1>CHEAT SHEET <small>{{ sheet.title }}</small></h1>
+{% set g = sheet.glance %}
+<div class="glance"><span><b>{{ g.n }}</b> inquiries</span><span>LATAM <b>{{ g.latam }}</b> &middot; RoW <b>{{ g.row }}</b></span><span>Air {{ g.air }} &middot; FCL {{ g.fcl }} &middot; LCL {{ g.lcl }} &middot; Other {{ g.other }}{% if g.other_parts %} ({{ g.other_parts }}){% endif %}{% if g.no_mode %} &middot; <span class="nomode">no mode {{ g.no_mode }}</span>{% endif %}</span><span>Export <b>{{ g.export }}</b> &middot; Import <b>{{ g['import'] }}</b> &middot; Triangle <b>{{ g.triangle }}</b></span><span>Won <b>{{ g.won }}</b> &middot; Lost <b>{{ g.lost }}</b>{% if g.cancelled %} &middot; Cancelled <b>{{ g.cancelled }}</b>{% endif %}</span></div>
+<h2>By who asked</h2>
+<table class="cs-sum"><thead><tr><th>Who asked</th><th class="num">Inq.</th><th class="num">Share</th><th class="num">Air</th><th class="num">FCL</th><th class="num">LCL</th><th class="num">Other</th>{% if g.no_mode %}<th class="num">No mode</th>{% endif %}<th class="num">Export</th><th class="num">Import</th><th class="num">Triangle</th><th class="num">Won</th><th>Most inquiries</th></tr></thead><tbody>
+{%- for grp in sheet.groups %}{% set r = grp.row %}
+<tr><td><i class="dot" style="background:{{ grp.colour }}"></i>{{ grp.name }}</td><td class="num"><b>{{ r.n }}</b></td><td class="num">{{ r.share }}%</td><td class="num">{{ n(r.air) }}</td><td class="num">{{ n(r.fcl) }}</td><td class="num">{{ n(r.lcl) }}</td><td class="num">{{ n(r.other) }}</td>{% if g.no_mode %}<td class="num">{{ n(r.no_mode) }}</td>{% endif %}<td class="num">{{ n(r.export) }}</td><td class="num">{{ n(r['import']) }}</td><td class="num">{{ n(r.triangle) }}</td><td class="num won">{{ n(r.won) }}</td><td>{{ r.most }}</td></tr>
+{%- endfor %}
+</tbody></table>
+{% for grp in sheet.groups %}
+<div class="grp"><h2><i class="dot" style="background:{{ grp.colour }}"></i>{{ grp.name }} <small>{{ grp.n }} inquir{{ 'y' if grp.n == 1 else 'ies' }} from {{ grp.requesters }} requester{{ '' if grp.requesters == 1 else 's' }}</small></h2>
+<table class="cs-top"><thead><tr><th class="c-who">Who</th><th class="c-ctry">Country</th><th class="num c-n">Inq.</th><th class="c-mode">Mode</th><th class="c-where">Where (origin &rarr; destination)</th><th class="num c-won">Won</th></tr></thead><tbody>
+{%- for q in grp.top %}
+<tr><td><b>{{ q.who }}</b></td><td>{{ q.country }}</td><td class="num">{{ q.n }}</td><td>{{ q.mode }}</td><td>
+  {%- for l in q.lines %}<div class="ln"><b>{{ l.lane }}</b> {{ l.n }}{% if l.pairs %} <span class="pt">{{ l.pairs }}</span>{% endif %}</div>{% endfor -%}
+  {%- if q.more %}<div class="ln more">+{{ q.more }} more lane{{ '' if q.more == 1 else 's' }}</div>{% endif -%}
+</td><td class="num won">{{ n(q.won) }}</td></tr>
+{%- endfor %}
+{% if grp.also %}<tr class="rest"><td colspan="6">Also: {{ grp.also }}</td></tr>{% endif %}
+</tbody></table></div>
+{% endfor %}
+</section>
+<section class="page cs"><div class="cols2"><div>
+<h2>Top lanes</h2><table class="cs-lanes"><thead><tr><th>Lane</th><th class="num">Inq.</th><th>Mode</th><th>Who asked</th><th class="num">Won</th></tr></thead><tbody>
+{%- for l in sheet.lanes %}
+<tr><td><b>{{ l.lane }}</b></td><td class="num">{{ l.n }}</td><td>{{ l.mode }}</td><td>{{ l.who }}</td><td class="num won">{{ n(l.won) }}</td></tr>
+{%- endfor %}
+</tbody></table></div><div>
+<h2>Won in {{ sheet.title.split(' ')[0] }} <small>{{ sheet.won|length }} inquir{{ 'y' if sheet.won|length == 1 else 'ies' }}</small></h2><table class="cs-won"><thead><tr><th>OPP</th><th>Who</th><th>Where</th><th>Mode</th><th>Cargo</th></tr></thead><tbody>
+{%- for w in sheet.won %}
+<tr><td><a href="{{ url_for('enquiry', enquiry_id=w.id) }}">{{ w.opp_no }}</a></td><td>{{ w.who }}</td><td>{{ w.where }}{% if w.pair %}<div class="sub">{{ w.pair }}</div>{% endif %}</td><td>{{ w.mode }}</td><td class="cg">{{ w.cargo }}</td></tr>
+{%- endfor %}
+</tbody></table></div></div></section>

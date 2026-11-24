@@ -1,0 +1,20 @@
+{
+  "note": "Invented sample ocean thread, mail 2 of 4: our own pre-alert to the destination agent once the vessel is gone. Our outgoing mail counts as Departed evidence, dated by the ETD figure.",
+  "subject": "PRE-ALERT | HLCUSAV3Q418 | SAV - SSZ | Halden Pumps",
+  "sender_name": "Iris Chen",
+  "sender_address": "IrisChen@jojofreight.example",
+  "sender_internal": true,
+  "received_on": "2026-09-11",
+  "received_at": "2026-09-11 16:20",
+  "to_addresses": [
+    "ops@costaverde-cargo.example"
+  ],
+  "cc_addresses": [
+    "VictorLang@jojofreight.example"
+  ],
+  "display_to": "Costa Verde Ops",
+  "conversation_id": "CONV-OCEAN-SAMPLE",
+  "entry_id": "ENTRY-OCEAN-0911",
+  "message_id": "<pre-alert-0911@jojofreight.example>",
+  "body": "Hi Team,\r\n\r\nPre-alert docs attached. Coral Meridian 114S sailed from Savannah with the box, ETD 9 Sep / ETA Santos 6 Oct.\r\n\r\nMBL HLCUSAV3Q418, HBL NWFSAV7K52.\r\n\r\nBest regards,\r\nIris\r\n"
+}

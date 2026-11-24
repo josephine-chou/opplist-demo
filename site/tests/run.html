@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>running…</title>
+<style>
+  body { font: 13px/1.5 ui-monospace, Consolas, monospace; margin: 24px; color: #1A1D21; }
+  h1 { font: 600 18px system-ui, sans-serif; } p { font-family: system-ui, sans-serif; color: #5B6470; }
+  pre { white-space: pre-wrap; } .FAIL { color: #A1281D; font-weight: 700; } .sum { font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>The site's unit tests, in the browser</h1>
+<p>The same files run in Node (<code>node site/tests/askmail_test.mjs</code>). Here the page imports each one and shows what it prints.
+  Add <code>?t=ratelib,store</code> to run some of them only.</p>
+<pre id="out"></pre>
+<script type="module">
+  // Each test file prints PASS or FAIL lines with console.log and ends with process.exit(code). The page
+  // stands in for both, so a file needs nothing that only Node has.
+  const ALL = ["askmail", "editlib", "quotemail", "ratelib", "store"];
+  const asked = new URLSearchParams(location.search).get("t");
+  const names = asked ? asked.split(",").filter(n => ALL.includes(n)) : ALL;
+  const out = document.getElementById("out");
+  let pass = 0, fail = 0, code = 0;
+  const say = line => {
+    const span = document.createElement("span");
+    if (/^FAIL\b/.test(line)) { span.className = "FAIL"; fail++; } else if (/^PASS\b/.test(line)) pass++;
+    span.textContent = line + "\n"; out.appendChild(span);
+  };
+  const log = console.log.bind(console);
+  console.log = (...a) => { say(a.map(String).join(" ")); log(...a); };
+  globalThis.process = { exit(c) { code = code || c || 0; }, argv: [], env: {} };
+  for (const n of names) {
+    say(`== ${n}_test.mjs`);
+    try { await import(`./${n}_test.mjs`); } catch (e) { say(`FAIL  ${n}_test.mjs did not run: ${e && e.message}`); }
+  }
+  const ok = !fail && !code;
+  say(`== ${pass} passed, ${fail} failed`);
+  out.lastChild.className = ok ? "sum" : "sum FAIL";
+  document.title = ok ? "PASSED" : "FAILED";
+</script>
+</body>
+</html>

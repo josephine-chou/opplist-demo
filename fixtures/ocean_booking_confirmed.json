@@ -1,0 +1,19 @@
+{
+  "note": "Invented sample ocean thread, mail 1 of 4: the carrier's booking desk confirms a 40' HC from Greenville, SC to Santos via Savannah. Reads as Booked (medium: no date next to the phrase).",
+  "subject": "BKG CONFIRMED - HLCUSAV3Q418 - Greenville SC to Santos 1x40HC",
+  "sender_name": "Hapag-Lloyd Booking Desk",
+  "sender_address": "booking.desk@hlag-desk.example",
+  "sender_internal": false,
+  "received_on": "2026-08-24",
+  "received_at": "2026-08-24 08:40",
+  "to_addresses": [
+    "IrisChen@jojofreight.example",
+    "VictorLang@jojofreight.example"
+  ],
+  "cc_addresses": [],
+  "display_to": "Iris Chen; JJC-VICTOR LANG",
+  "conversation_id": "CONV-OCEAN-SAMPLE",
+  "entry_id": "ENTRY-OCEAN-0824",
+  "message_id": "<bkg-conf-0824@hlag-desk.example>",
+  "body": "Dear Iris,\r\n\r\nWe have booked 1 x 40' HC for you, details below.\r\n\r\nBooking no. HLCUSAV3Q418 / vessel Coral Meridian 114S / ETD Savannah 9 Sep 2026 / ETA Santos 6 Oct 2026.\r\nEmpty release at Garden City terminal from 31 Aug.\r\n\r\nKind regards,\r\nBooking Desk\r\n"
+}

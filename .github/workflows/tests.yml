@@ -1,0 +1,32 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: python -m pip install -r requirements.txt
+      - name: Test
+        run: python -m pytest -q
+
+  # The team site's unit tests (site/tests/*_test.mjs) are plain ES modules: Node runs them as they are,
+  # with no package installed and no connection opened.
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The site's unit tests
+        run: for f in site/tests/*_test.mjs; do echo "== $f"; node "$f" | grep -v "^PASS" ; test "${PIPESTATUS[0]}" -eq 0; done

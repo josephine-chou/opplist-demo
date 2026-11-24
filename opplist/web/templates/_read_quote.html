@@ -1,0 +1,70 @@
+{# Q2d: the Read quote panel under a Rate requests row: pick a mail of the rate
+   request's tab, or paste a message; after a reading, what was read, its warnings and cost #}
+{% set panel = read_quote.panel %}
+{% set reading = read_quote.reading %}
+<div class="rq-panel" id="read-quote">
+  <h3>Read quote &middot; {{ panel.vendor }}</h3>
+  {% if reading %}
+  <div class="rq-result">
+    {% if reading.status == 'failed' %}
+      <p class="warn">Not read: {{ reading.error }}</p>
+    {% elif reading.status == 'no_prices' %}
+      <p class="warn">No prices in it{% if reading.why_not %}: {{ reading.why_not }}{% endif %}. Nothing goes to the team site.</p>
+    {% endif %}
+    {% for d in reading.drafts %}
+    <div class="rq-draft">
+      <p><b>{% if d.letter %}Route {{ d.letter }}{% else %}No route named{% endif %}</b>
+        <span class="pill {{ 'ok' if d.status == 'saved' else ('muted-pill' if d.status != 'open' else '') }}">{{ d.status }}</span>
+        {% if d.status == 'open' %}<a class="button small-button primary" href="{{ d.link }}" target="_blank" rel="noopener">Check and save on the team site</a>{% endif %}</p>
+      {% if d.warnings %}<ul class="rq-warnings">{% for w in d.warnings %}<li class="tone-amber">{{ w }}</li>{% endfor %}</ul>{% endif %}
+      {% for o in d.options %}
+      <p class="muted small">{% if o.label %}<b>{{ o.label }}</b> &middot; {% endif %}{{ o.cur or 'no currency' }}{% if o.valid %} &middot; valid until {{ o.valid|day }}{% endif %}{% if o.transit %} &middot; transit {{ o.transit }}{% endif %}{% if o.carrier %} &middot; {{ o.carrier }}{% endif %}{% if o.free %} &middot; free time {{ o.free }}{% endif %}
+        &middot; fuel {{ o.said.fuel }}, local {{ o.said.local }}, min {{ o.said.min }}</p>
+      <table class="tbl rate-lines">
+        <thead><tr><th>Part</th><th>Charge</th><th>Unit</th><th class="num">Rate</th><th class="num">Min</th><th class="num">Qty</th><th class="num">Amount</th></tr></thead>
+        <tbody>{% for l in o.lines %}<tr title="{{ l.quote }}"><td>{{ l.seg }}</td><td>{{ l.charge }}</td><td>{{ l.unit or ('(' ~ l.asWritten ~ ')' if l.asWritten else '') }}</td>
+          <td class="num">{{ l.word or (l.rate if l.rate is not none else '') }}</td><td class="num">{{ l.min if l.min is not none else '' }}</td>
+          <td class="num">{{ l.qty if l.qty is not none else '' }}</td><td class="num">{{ l.amount if l.amount is not none else '' }}</td></tr>{% endfor %}</tbody>
+      </table>
+      {% if o.note %}<p class="muted small">Note: {{ o.note }}</p>{% endif %}
+      {% endfor %}
+    </div>
+    {% endfor %}
+    <p class="muted small">Reading {{ reading.id }} &middot; {{ reading.at[:16] }} &middot; {{ reading.subject or 'a pasted message' }}{% if reading.sent %} (sent {{ reading.sent }}){% endif %}
+      &middot; USD {{ '%.4f'|format(reading.cost) }} &middot; {{ '{:,}'.format(reading.tokens[0]) }} in / {{ '{:,}'.format(reading.tokens[1]) }} out tokens &middot; {{ reading.model }}</p>
+    {% set not_sent = reading.files|rejectattr('sent')|list %}
+    {% if reading.files %}<p class="muted small">Files: {% for f in reading.files %}{{ f.name }}{% if not f.sent %} (not sent: {{ f.why }}){% endif %}{% if not loop.last %}; {% endif %}{% endfor %}</p>{% endif %}
+  </div>
+  {% endif %}
+  <form method="post" class="rq-form" enctype="multipart/form-data" action="{{ url_for('enquiry_read_quote', enquiry_id=enquiry_id, request_id=panel.request_id) }}">
+    <label class="rq-drop" data-rq-drop>
+      <span>Drop their mail here from Outlook (a .msg, or an .eml), or pick one</span>
+      <input type="file" name="mail_file" accept=".msg,.eml">
+      <span class="muted small" data-rq-name></span>
+      <em class="note">A dropped mail is read instead of the picked mail or a paste, with its attachments.</em>
+    </label>
+    {% if panel.mails %}
+    <ul class="rq-mails">
+      {% for m in panel.mails %}
+      <li><label><input type="radio" name="mail" value="{{ m.id }}"{% if m.picked %} checked{% endif %}{% if not m.id %} disabled{% endif %}>
+        <span class="mono">{{ m.sent }}</span> &middot; {{ m.sender }}{% if not m.vendor %} <span class="muted small">(not the vendor)</span>{% endif %} &middot; {{ m.subject }}
+        {% if m.files %}<span class="muted small">&middot; {{ m.files|join(', ') }}</span>{% endif %}</label></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">{% if panel.archive %}No mail in this rate request's tab on the Mail card.{% else %}The mail archive is not there.{% endif %} Paste the vendor's message below.</p>
+    {% endif %}
+    <details class="rq-paste"{% if not panel.mails %} open{% endif %}>
+      <summary>Paste a message instead</summary>
+      <label class="f wide"><span>Message (WhatsApp, chat), at most {{ '{:,}'.format(panel.paste_max) }} characters</span>
+        <textarea name="paste" rows="6" maxlength="{{ panel.paste_max }}"></textarea></label>
+      <label class="f"><span>The day they sent it</span><input type="date" name="paste_day" value="{{ panel.today }}" max="{{ panel.today }}"></label>
+      <em class="note">A pasted message is read instead of the picked mail.</em>
+    </details>
+    <div class="foot">
+      <button class="button primary" type="submit">{{ 'Read again' if reading else 'Read' }}</button>
+      <a class="button" href="{{ url_for('enquiry', enquiry_id=enquiry_id) }}#vendors">Close</a>
+      <span class="muted small">Takes up to two minutes. What is read becomes a draft on the team site, to check line by line in the rates drawer; nothing is kept as their rates until it is saved there.</span>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,82 @@
+{# The month report body (batch 17a): A4 landscape pages as
+   sample v11 - Overview, Regions, Agents; 17f: page 4 Analysis · Agents,
+   17g: page 5 Analysis · Requests, as sample v16 (monthly_analysis.Card). Shared by the /report page and
+   the exported HTML; the check box is the page's only (precheck). #}
+{% macro table(t, cls='', bold_col=None) %}
+<table{% if cls %} class="{{ cls }}"{% endif %}><thead><tr>{% for c in t.columns %}{% set mark = t.marks[loop.index0 - 1] if (not loop.first and t.marks and t.marks|length >= loop.index0) else '' %}<th class="{{ '' if loop.first else 'num' }}{{ ' ' ~ mark if mark in ('dir', 'won') else '' }}">{% if c == 'Cross-border Truck' %}Cross-border<br>Truck{% else %}{{ c }}{% endif %}</th>{% endfor %}</tr></thead><tbody>
+{%- for r in t.rows -%}
+{% if r.cls in ('head', 'note') %}<tr class="{{ r.cls }}"><td colspan="{{ t.columns|length }}">{{ r.page or r.label }}</td></tr>
+{% else %}<tr class="{{ r.cls }}"><td>{{ r.label }}</td>{% for c in r.cells %}{% set mark = r.marks[loop.index0] if r.marks and r.marks|length > loop.index0 else '' %}<td class="num{{ ' ' ~ mark if mark else '' }}">{% if bold_col is not none and loop.index0 == bold_col %}<b>{{ c }}</b>{% else %}{{ c }}{% endif %}</td>{% endfor %}</tr>
+{% endif %}
+{%- endfor -%}
+</tbody></table>
+{% endmacro %}
+{% macro card(c) %}<div class="card"><h3><span class="cn">{{ c.number }}</span>{{ c.title }}</h3>
+{%- if c.empty %}<p class="none">{{ c.empty }}</p>{% else %}<div class="hl"><b>{{ c.big }}</b><span class="cap">{{ c.caption }}</span>{% if c.pill %}<span class="pill {{ c.pill[1] }}">{{ c.pill[0] }}</span>{% endif %}</div>{{ c.svg|safe }}
+{% if c.legend %}<div class="lg">{% for colour, label in c.legend %}<span><i style="background:{{ colour }}"></i>{{ label }}</span>{% endfor %}</div>{% endif %}<ul class="kp">{% for b in c.bullets %}<li>{% for text, bold in b %}{% if bold %}<b>{{ text }}</b>{% else %}{{ text }}{% endif %}{% endfor %}</li>{% endfor %}</ul>{% endif %}</div>{% endmacro %}
+{% if precheck %}
+<div class="precheck" id="precheck"><h2>Check before you print <small>{{ report.month_name }}</small></h2>
+{%- for g in report.checks %}<div class="pc-g"><b>{{ g.title }}</b> <span class="pc-n">{{ g['items']|length }}</span><div class="pc-l">
+  {%- for i in g['items'] %}<span class="pc-i">{% for id in i.ids %}<a href="{{ url_for('enquiry', enquiry_id=id) }}">{{ i.opp_nos[loop.index0] }}</a>{% if not loop.last %}, {% endif %}{% endfor %} {{ i.who }}{% if i.text %} <em>{{ i.text }}</em>{% endif %}</span>{% endfor -%}
+</div></div>
+{%- else %}<p class="pc-ok">Nothing to fix.</p>{% endfor %}
+</div>
+{% endif %}
+<section class="page{{ ' dense' if report.dense_overview else '' }}"><h1>{{ report.title }} <small>Overview</small></h1>
+<div class="kpis">{% for value, label in report.kpis %}{% set sub = report.kpi_notes.get(label) %}<div class="kpi"><b>{{ value }}</b>{% if sub %}<small>{{ sub }}</small>{% endif %}<span>{{ label }}</span></div>{% endfor %}</div>
+<div class="cols2">
+ <div>
+  <h2><span class="sn">1.</span>By scope, requester and direction</h2>{{ table(report.by_scope, 'mid s1' ~ report.s1_class) }}
+  <h2><span class="sn">2.</span>Why we lost</h2>
+  {% if report.lost_bars %}{{ frag.bars|safe }}{% else %}<p class="none">No lost cases this month.</p>{% endif %}
+  {% if report.cancelled %}
+  {% set shown = report.cancelled[:report.cancelled_shown] %}
+  <div class="lostnotes"><div class="ln-h">Cancelled <span class="ln-k">{{ report.cancelled|length }}</span></div>
+   {%- for c in shown %}<div class="ln"><span class="ln-k">{{ c.opp_no }} &middot; {{ c.requester }}:</span> {{ c.reason }}{% if c.note %}{% if c.reason %}, {% endif %}{{ c.note }}{% endif %}</div>{% endfor %}
+   {%- if report.cancelled|length > shown|length %}<div class="ln-more">and {{ report.cancelled|length - shown|length }} more</div>{% endif %}
+  </div>
+  {% endif %}
+ </div>
+ <div>
+  <h2><span class="sn">3.</span>Requests per month, {{ report.month[:4] }}</h2><div class="chartbox">{{ frag.chart|safe }}</div>
+  <h2><span class="sn">4.</span>{{ report.month_name }} vs {{ report.previous_name }} <small>{{ report.win_rate_rule }}</small></h2>{{ table(report.compare, 'cmp', bold_col=1) }}
+ </div>
+</div></section>
+<section class="page{{ ' o6' if report.direction_other else '' }}"><h1>{{ report.title }} <small>Regions</small></h1>
+<div class="p2grid">
+ <div>
+  <h2><span class="sn">5.</span>Where the LATAM traffic is <small>inquiries touching each country &middot; green core = won</small></h2>
+  <div class="mapzone"><div class="mapbox">{{ frag.map|safe }}</div>
+   {% if report.countries.rows %}<div class="maptable">{{ table(report.countries, 'mini') }}</div>
+   {% else %}<p class="none">No LATAM routes this month.</p>{% endif %}
+  </div>
+ </div>
+ <div>
+  <h2><span class="sn">6.</span>LATAM by service type</h2>{{ table(report.direction, 'mid') }}
+  <h2><span class="sn">7.</span>Top lanes</h2>{{ table(report.top_lanes, 'mid') }}
+  <h2><span class="sn">8.</span>Top LATAM ocean destinations (POD)</h2>{{ table(report.top_pods, 'mid') }}
+ </div>
+</div></section>
+<section class="page{{ ' dense' if report.dense_agents else '' }}{{ report.page3_class }}"><h1>{{ report.title }} <small>Agents</small></h1>
+ <h2><span class="sn">9.</span>Top 5 agents <small>inquiries, won and volume</small></h2>{{ table(report.top_agents, 'ta') }}
+ <div class="p3low">
+  <div>
+   <h2><span class="sn">10.</span>Requests per week <small>by who asked</small></h2><div class="chartbox">{{ frag.weeks|safe }}</div>
+   <div class="glegend">{{ frag.week_legend|safe }}</div>
+  </div>
+  <div>
+   <h2><span class="sn">11.</span>Who sends the requests</h2>
+   <div class="donutwrap">{{ frag.donut|safe }}<div class="dlegend">{{ frag.donut_legend|safe }}</div></div>
+  </div>
+ </div>
+</section>
+{% if report.analysis %}<section class="page{{ ' dense' if report.dense_analysis else '' }}"><h1>{{ report.title }} <small>Analysis &middot; Agents</small></h1>
+<div class="g g5">{{ card(report.analysis[0]) }}</div>
+<div class="g g6">{{ card(report.analysis[1]) }}{{ card(report.analysis[2]) }}</div>
+</section>
+{% endif %}
+{% if report.requests %}<section class="page{{ ' dense' if report.dense_requests else '' }}"><h1>{{ report.title }} <small>Analysis &middot; Requests</small></h1>
+<div class="g g7">{{ card(report.requests[0]) }}{{ card(report.requests[1]) }}</div>
+<div class="g g1">{{ card(report.requests[2]) }}{{ card(report.requests[3]) }}</div>
+</section>
+{% endif %}

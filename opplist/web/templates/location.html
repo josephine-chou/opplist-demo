@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ row.key if row else t.location_new }}{% endblock %}
+{% block content %}
+<h1>{{ row.key if row else t.location_new }}
+  {% if row and row.status == 'to_confirm' %}<span class="pill warn">to confirm</span>{% endif %}
+  {% if row and row.status == 'retired' %}<span class="pill">retired</span>{% endif %}
+</h1>
+{% if row %}<p class="muted meta">id {{ row.id }} &middot; source {{ row.source }} &middot; created {{ row.created_at }} &middot; updated {{ row.updated_at }}</p>{% endif %}
+
+{# RD1: a refused save comes back with what was typed (draft) and the reason by its field #}
+{% set errors = errors or {} %}
+{% macro val(name, default='') %}{% if draft %}{{ draft.get(name, '') }}{% elif row and row[name] is not none %}{{ row[name] }}{% else %}{{ default }}{% endif %}{% endmacro %}
+{% macro ticked(name) %}{% if draft %}{% if draft.get(name) %}checked{% endif %}{% elif row and row[name] %}checked{% endif %}{% endmacro %}
+{% set cur_type = draft.get('type') if draft else (row.type if row else types[0]) %}
+{% set cur_country = draft.get('country') if draft else (row.country if row else '') %}
+{% set cur_status = draft.get('status') if draft else (row.status if row else '') %}
+{% set cur_area = draft.get('area_key') if draft else (area.key if area else '') %}
+<form method="post" class="form-grid narrow" id="location-form" action="{{ url_for('location', location_id=row.id) if row else url_for('location_new') }}">
+  <label class="f"><span>Key</span><input name="key" value="{{ val('key') }}" required
+    placeholder="CHICAGO, IL / ORD / YANTIAN">
+    {% if errors.get('key') %}<em class="err">{{ errors['key'] }}</em>{% endif %}</label>
+  <label class="f"><span>Name</span><input name="name" value="{{ val('name') }}" placeholder="the proper spelling"></label>
+  <label class="f"><span>Type</span>
+    <select name="type" data-location-type>
+      {% for ty in types %}<option value="{{ ty }}" {% if cur_type == ty %}selected{% endif %}>{{ ty }}</option>{% endfor %}
+    </select></label>
+  <label class="f"><span>Country</span>
+    <select name="country">
+      {% for c in countries %}<option value="{{ c.name }}" {% if cur_country == c.name %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select></label>
+  <label class="f"><span>State (US / CA)</span><input name="subdivision" value="{{ val('subdivision') }}" maxlength="3"></label>
+  <label class="f gateway-only" {% if cur_type == 'city' %}hidden{% endif %}><span>Parent city</span>
+    <input name="parent_key" list="parent-keys" value="{{ draft.get('parent_key', '') if draft else (parent.key if parent else '') }}" placeholder="the market city a gateway serves">
+    <datalist id="parent-keys">{% for k in parent_keys %}<option value="{{ k }}">{% endfor %}</datalist>
+    {% if errors.get('parent_key') %}<em class="err">{{ errors['parent_key'] }}</em>{% endif %}</label>
+  <label class="f gateway-only" {% if cur_type == 'city' %}hidden{% endif %}><span>{{ t.location_no_parent }}</span>
+    <span><input type="checkbox" name="no_parent" {{ ticked('no_parent') }}> <small class="muted">{{ t.location_no_parent_hint }}</small></span></label>
+  <label class="f"><span>Area</span>
+    <select name="area_key">
+      <option value="">-</option>
+      {% for a in areas %}<option value="{{ a.key }}" {% if cur_area == a.key %}selected{% endif %}>{{ a.key }} &middot; {{ a.name }}</option>{% endfor %}
+    </select></label>
+  <label class="f"><span>UN/LOCODE</span><input name="unlocode" value="{{ val('unlocode') }}" maxlength="5"></label>
+  <label class="f"><span>IATA</span><input name="iata" value="{{ val('iata') }}" maxlength="3"></label>
+  <label class="f"><span>Latitude</span><input name="lat" value="{{ val('lat') }}" placeholder="-90 to 90" inputmode="decimal"></label>
+  <label class="f"><span>Longitude</span><input name="lon" value="{{ val('lon') }}" placeholder="-180 to 180" inputmode="decimal"></label>
+  <label class="f"><span>Seaport</span><input type="checkbox" name="is_seaport" {{ ticked('is_seaport') }}></label>
+  <label class="f"><span>Airport</span><input type="checkbox" name="is_airport" {{ ticked('is_airport') }}></label>
+  <label class="f"><span>Status</span>
+    <select name="status">
+      {% for s in statuses %}<option value="{{ s }}" {% if cur_status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+    </select></label>
+  <label class="f wide"><span>Note</span><textarea name="note" rows="2">{{ val('note') }}</textarea></label>
+  <div class="actions"><button class="button primary" type="submit">{{ t.save }}</button>
+    <a class="button" href="{{ url_for('locations') }}">{{ t.nav_locations }}</a></div>
+</form>
+
+{% if row %}
+{% if row.status != 'retired' %}
+<form method="post" class="row-form merge-into" action="{{ url_for('locations_merge') }}"
+      onsubmit="return confirm({{ t.location_merge_confirm|tojson }});">
+  <input type="hidden" name="location_id" value="{{ row.id }}">
+  <span>{{ t.location_merge_title }}</span>
+  <input name="other_key" list="merge-location-keys" placeholder="{{ t.location_merge_hint }}" required
+         aria-label="{{ t.location_merge_title }}">
+  <datalist id="merge-location-keys">
+    {% for key in merge_keys %}<option value="{{ key }}">{% endfor %}
+  </datalist>
+  <button class="button" name="keep" value="this" type="submit">{{ t.location_merge_keep_this }}</button>
+  <button class="button" name="keep" value="other" type="submit">{{ t.location_merge_keep_other }}</button>
+</form>
+{% endif %}
+<h2>{{ t.location_aliases }}</h2>
+{% if aliases %}
+<table class="grid narrow">
+  <thead><tr><th>Alias</th><th>Kind</th><th></th></tr></thead>
+  <tbody>
+  {% for a in aliases %}
+    <tr><td class="mono">{{ a.alias }}</td><td>{{ a.kind }}</td>
+      <td><form method="post" class="row-form" action="{{ url_for('location_aliases', location_id=row.id) }}">
+        <input type="hidden" name="remove" value="{{ a.alias }}">
+        <button class="link" type="submit">{{ t.location_remove_alias }}</button></form></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<p class="muted">No aliases yet.</p>{% endif %}
+<form method="post" class="row-form" action="{{ url_for('location_aliases', location_id=row.id) }}">
+  <input name="alias" placeholder="another spelling a mail uses" required>
+  <button class="button" type="submit">{{ t.location_add_alias }}</button>
+</form>
+
+{% if children %}
+<h2>Gateways of this city</h2>
+<p>{% for c in children %}<a href="{{ url_for('location', location_id=c.id) }}">{{ c.key }}</a> ({{ c.type }}){% if not loop.last %}, {% endif %}{% endfor %}</p>
+{% endif %}
+
+<h2>{{ t.location_used_by }} <span class="count">{{ used|length }}</span></h2>
+{% if used %}
+<table class="grid narrow">
+  <thead><tr><th>Case</th><th>Origin</th><th>Dest</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for e in used %}
+    <tr onclick="location='{{ url_for('enquiry', enquiry_id=e.id) }}'">
+      <td><a href="{{ url_for('enquiry', enquiry_id=e.id) }}">{{ e.opp_no }}</a></td>
+      <td>{{ e.origin_loc or '' }}</td><td>{{ e.dest_loc or '' }}</td><td>{{ e.status }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<p class="muted">No case points here.</p>{% endif %}
+{% endif %}
+{% endblock %}

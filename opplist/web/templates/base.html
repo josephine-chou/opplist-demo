@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ t.app_name }}{% endblock %} - {{ t.app_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css', v=static_v('app.css')) }}">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico', v=static_v('favicon.ico')) }}" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32.png', v=static_v('favicon-32.png')) }}">
+  <link rel="icon" type="image/png" sizes="64x64" href="{{ url_for('static', filename='favicon-64.png', v=static_v('favicon-64.png')) }}">
+</head>
+<body data-home="{{ home_office }}">
+<header class="topbar">
+  <a class="brand" href="{{ url_for('enquiries') }}">{{ t.app_name }}</a>
+  <nav>
+    <a href="{{ url_for('enquiries') }}">{{ t.nav_enquiries }}</a>
+    {% if shipments_on %}<a href="{{ url_for('shipments_page') }}">{{ t.nav_shipments }}</a>{% endif %}
+    <a href="{{ url_for('parties') }}">{{ t.nav_parties }}</a>
+    <a href="{{ url_for('locations') }}">{{ t.nav_locations }}</a>
+    <a href="{{ url_for('tracking_page') }}">{{ t.nav_tracking }}{% if tracking_badge %} <span class="badge" title="R1 + R3">{{ tracking_badge }}</span>{% endif %}</a>
+    <a href="{{ url_for('dashboard_page') }}">{{ t.nav_dashboard }}</a>
+    <a href="{{ url_for('report_page') }}">{{ t.nav_report }}</a>
+    <a href="{{ url_for('export_page') }}">{{ t.nav_export }}</a>
+    <a href="{{ url_for('settings') }}">{{ t.nav_settings }}</a>
+  </nav>
+  {# 13e: one search box for every page - All cases by default; on Enquiries
+     and Parties it shows the q in force #}
+  {% set tb_q = request.args.get('q', '') if request.endpoint in ('enquiries', 'parties') else '' %}
+  {% set tb_scope = 'parties' if (request.endpoint == 'parties' and tb_q) else
+       ('open' if (request.endpoint == 'enquiries' and tb_q and request.args.get('view', 'open') == 'open') else 'all') %}
+  <form class="tb-search no-print" id="tb-search" method="get" action="{{ url_for('search') }}"
+        role="search" autocomplete="off">
+    <select id="tb-search-scope" name="scope" aria-label="{{ t.search_in }}">
+      <option value="all"{% if tb_scope == 'all' %} selected{% endif %}>{{ t.search_all }}</option>
+      <option value="open"{% if tb_scope == 'open' %} selected{% endif %}>{{ t.search_open }}</option>
+      <option value="parties"{% if tb_scope == 'parties' %} selected{% endif %}>{{ t.search_parties }}</option>
+    </select>
+    <input id="tb-search-q" name="q" value="{{ tb_q }}" placeholder="{{ t.search_placeholder }}"
+           aria-label="{{ t.search_label }}">
+    <kbd title="{{ t.search_key_hint }}">/</kbd>
+  </form>
+  <div class="actions">
+    <a class="button primary" href="{{ url_for('enquiry_new') }}">{{ t.new_enquiry }}</a>
+    <form method="post" action="{{ url_for('enquiry_from_outlook') }}">
+      <button class="button" type="submit"
+              title="{{ t.register_outlook_hint }}">{{ t.register_outlook }}</button>
+    </form>
+  </div>
+</header>
+{# OP1: the morning run, when a step of it was skipped or failed today #}
+{% if run_banner %}<p class="run-banner no-print" id="run-banner" role="alert">{{ run_banner.text }} {{ run_banner.fix }}{% if run_banner.site %} {{ run_banner.site }}{% endif %}</p>{% endif %}
+{# OP2: 8765 not running the last commit #}
+{% if code_banner %}<p class="run-banner no-print" id="code-banner" role="alert">{{ code_banner }}</p>{% endif %}
+
+{# F1: every message is a toast fixed under the top bar, in view wherever
+   the page is scrolled. 'warning' = a refusal or nothing done (amber, stays
+   until x or the next action); anything else = done (green, fades). A
+   message may carry one action button (Log anyway). #}
+<div class="toasts" id="toasts" role="status" aria-live="polite">
+{%- for kind, m in get_flashed_messages(with_categories=true) %}
+  <div class="toast {{ 'warn' if kind == 'warning' else 'done' }}">
+    <span class="t-text">{{ m.text if m is mapping else m }}</span>
+    {%- if m is mapping and m.action %}
+    <form method="post" class="t-act" action="{{ m.action.url }}">
+      {%- for name, value in m.action.fields.items() %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+      <button class="button" type="submit">{{ m.action.label }}</button>
+    </form>
+    {%- endif %}
+    <button type="button" class="t-close" aria-label="Close">&times;</button>
+  </div>
+{%- endfor %}
+</div>
+
+<main class="{% block main_class %}{% endblock %}">{% block content %}{% endblock %}</main>
+<footer class="build no-print">{{ build.line }}</footer>
+<script src="{{ url_for('static', filename='app.js', v=static_v('app.js')) }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

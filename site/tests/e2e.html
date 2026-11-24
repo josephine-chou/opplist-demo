@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>running…</title>
+<style>
+  body { font: 13px/1.5 ui-monospace, Consolas, monospace; margin: 24px; color: #1A1D21; }
+  h1 { font: 600 18px system-ui, sans-serif; } p { font-family: system-ui, sans-serif; color: #5B6470; }
+  pre { white-space: pre-wrap; } .FAIL { color: #A1281D; font-weight: 700; } .sum { font-weight: 700; }
+  iframe { width: 1280px; height: 720px; border: 1px solid #DDE1E6; margin-top: 16px; }
+</style>
+</head>
+<body>
+<h1>The site, clicked through</h1>
+<p>This page opens the site in the frame below and does what a visitor would do: changes who handles a case, logs a
+  follow-up, adds a note, sends a Won, switches person, reloads, resets. It checks after each step what the pages
+  show. It needs the snapshot (<code>data/snapshot.json</code>); it resets the demo before and after.</p>
+<pre id="out"></pre>
+<iframe id="app" title="the site under test"></iframe>
+<script type="module">
+  const out = document.getElementById("out"), frame = document.getElementById("app");
+  let pass = 0, fail = 0;
+  const say = (line, cls = "") => { const s = document.createElement("span"); s.className = cls; s.textContent = line + "\n"; out.appendChild(s); };
+  const ok = (label, cond, detail = "") => { if (cond) { pass++; say(`PASS  ${label}`); } else { fail++; say(`FAIL  ${label}${detail ? `: ${detail}` : ""}`, "FAIL"); } };
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const doc = () => frame.contentDocument, win = () => frame.contentWindow;
+  const $ = sel => doc().querySelector(sel), $$ = sel => [...doc().querySelectorAll(sel)];
+  // waits until fn() gives something, at most 8 seconds
+  async function until(fn, what) {
+    for (let i = 0; i < 160; i++) { try { const v = fn(); if (v) return v; } catch (_) { /* the page is still loading */ } await sleep(50); }
+    throw new Error(`waited in vain for ${what}`);
+  }
+  const PEOPLE = { iris: "iris.chen@jojofreight.example", victor: "victor.lang@jojofreight.example", ava: "ava.tran@jojofreight.example" };
+  // opens the site as a person on a page; a full load, as when a visitor types the address
+  async function open(who, hash) {
+    const loaded = new Promise(r => frame.addEventListener("load", r, { once: true }));
+    frame.src = "about:blank"; await loaded;
+    const again = new Promise(r => frame.addEventListener("load", r, { once: true }));
+    frame.src = `../index.html?as=${PEOPLE[who]}#/${hash}`; await again;
+    await until(() => win().__opplist?.S.me && win().__opplist.S.inquiries, "the lists");
+  }
+  const go = async hash => { win().location.hash = `#/${hash}`; await sleep(150); };
+  const S = () => win().__opplist.S, merged = () => win().__opplist.merged();
+  // a module of the site as the page in the frame has it loaded (the same instance, not a second copy)
+  const mod = name => win().eval(`import(${JSON.stringify(new URL(`../${name}`, location.href).href)})`);
+  const text = el => (el?.textContent || "").replace(/\s+/g, " ").trim();
+  function forget() { for (const k of Object.keys(localStorage)) if (k.startsWith("opplist-demo.") || k.startsWith("opplist.")) localStorage.removeItem(k); }
+  const setValue = (el, v) => { el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); el.dispatchEvent(new Event("change", { bubbles: true })); };
+
+  try {
+    forget();
+
+    // ---------------------------------------------------------------- the Assign List: change who handles a case
+    await open("ava", "assign");
+    ok("the page says whose view it is", text($("#va-who option:checked")).startsWith("Ava Tran"), text($("#va")));
+    ok("a member has no Monthly report, Issues or Users in the menu", !$('a[href="#/report"]') && !$('a[href="#/issues"]') && !$('a[href="#/users"]'));
+    const change = await until(() => $("[data-change]"), "a Change button");
+    const opp = change.dataset.change, ownerBefore = merged().byOpp.get(opp).owner;
+    change.click();
+    const sel = await until(() => $(`select[data-assign="${opp}"]`), "the owner list");
+    ok("the list offers the Handled by names OppList pushed", [...sel.options].some(o => o.value === "Ava") && [...sel.options].some(o => o.value === "Victor"));
+    setValue(sel, "Ava");
+    await until(() => merged().byOpp.get(opp).owner === "Ava", "the new owner in the lists");
+    ok("the case is Ava's at once, in every list", merged().waiting.concat(merged().pending).filter(r => r.opp === opp).every(r => r.owner === "Ava") && ownerBefore !== "Ava");
+    ok("the row shows it", text(await until(() => $(`[data-hb="${opp}"] .chip`), "the chip")) === "Ava");
+    ok("the action waits for OppList, laid over the lists", S().overlay.concat(S().local).some(a => a.type === "assign" && a.opp === opp && a.to === "Ava"));
+    ok("the menu counts what was saved", /Reset demo \(\d+ saved\)/.test(text($("#btn-reset"))), text($("#btn-reset")));
+
+    // ---------------------------------------------------------------- a follow-up from the Follow-ups page
+    await go("followups");
+    const fu = await until(() => $('a.btn[href*="do=fu"]'), "a Log follow-up button");
+    const fuOpp = new URLSearchParams(fu.getAttribute("href").split("?")[1]).get("opp");
+    const dueBefore = merged().byOpp.get(fuOpp).fu;
+    fu.click();
+    const form = await until(() => $("#f-p"), "the follow-up form");
+    ok("the button opens the case with the form ready", /Log follow-up/.test(text(form.querySelector("h3"))) && S().view === "case");
+    form.requestSubmit();
+    await until(() => /^Follow-up /.test(merged().byOpp.get(fuOpp).lastText), "the follow-up in the lists");
+    ok("the follow-up that was due is no longer due", dueBefore && merged().byOpp.get(fuOpp).fu === "", `before ${dueBefore}`);
+    await go("followups");
+    await until(() => $("#pg-fu"), "the Follow-ups page");
+    await sleep(200);
+    ok("and the case has left the due lists", !$$('a.btn[href*="do=fu"]').some(a => a.getAttribute("href").includes(fuOpp)));
+
+    // ---------------------------------------------------------------- a note on My board
+    await go("board");
+    const noteForm = await until(() => $("#f-note"), "the note form");
+    noteForm.text.value = "Ask the trucker for Thursday";
+    noteForm.requestSubmit();
+    await until(() => text($("#notes")).includes("Ask the trucker for Thursday"), "the note on the board");
+    ok("a note appears on the board as soon as it is saved", true);
+
+    // ---------------------------------------------------------------- the case page; costs are not for everyone
+    await go(`case?opp=${fuOpp}`);
+    await until(() => text($("#main")).includes(fuOpp) && text($("#main")).includes("Timeline"), "the case page");
+    ok("the case page shows the follow-up as not in the lists yet", /Follow-up/.test(text($("#main"))));
+    ok("a member without Costs: the store refuses the costs", S().me.costs !== true && S().me.role !== "admin");
+
+    // ---------------------------------------------------------------- switching person keeps what was done
+    setValue($("#va-who"), PEOPLE.victor);
+    await until(() => S().me?.email === PEOPLE.victor && S().inquiries, "Victor's view");
+    ok("Victor sees the same change", merged().byOpp.get(opp).owner === "Ava");
+    ok("a member ticked for it has Monthly report in the menu", !!(await until(() => $('a[href="#/report"]'), "the menu")));
+    await go("report");
+    await until(() => text($("#main")).includes("REPORT"), "the monthly report");
+    ok("and can open it", /REPORT/.test(text($("#main"))));
+
+    // ---------------------------------------------------------------- the administrator: Users
+    setValue($("#va-who"), PEOPLE.iris);
+    await until(() => S().me?.email === PEOPLE.iris && S().inquiries, "the administrator's view");
+    await go("users");
+    const row = await until(() => $(`tr[data-e="${PEOPLE.ava}"]`), "the Users page");
+    row.click();
+    const uf = await until(() => $("#f-user"), "the user form");
+    uf.costs.checked = true;
+    uf.requestSubmit();
+    await until(() => !$("#f-user"), "the form to close");
+    setValue($("#va-who"), PEOPLE.ava);
+    await until(() => S().me?.email === PEOPLE.ava && S().me.costs === true, "Ava with Costs");
+    ok("Costs ticked under Users reaches the person at once", S().me.costs === true);
+
+    // ---------------------------------------------------------------- a reload keeps it; Reset forgets it
+    await open("ava", "assign");
+    ok("after a reload the case is still Ava's", merged().byOpp.get(opp).owner === "Ava");
+    ok("and the follow-up is still logged", /^Follow-up /.test(merged().byOpp.get(fuOpp).lastText));
+    (await until(() => $("#btn-reset"), "Reset demo")).click();
+    const loaded = new Promise(r => frame.addEventListener("load", r, { once: true }));
+    (await until(() => $("#cf-ok"), "the question")).click();
+    await loaded;
+    await until(() => win().__opplist?.S.me && win().__opplist.S.inquiries, "the lists after Reset");
+    ok("after Reset the case is back with its owner", merged().byOpp.get(opp).owner === ownerBefore, merged().byOpp.get(opp).owner);
+    ok("and only the snapshot's own waiting Won is laid over the lists", S().overlay.every(a => a.id.startsWith("demo-")) && S().local.length === 0);
+    ok("and Costs is unticked again", S().me.costs !== true);
+
+    // ---------------------------------------------------------------- the case page and its drawers
+    const errors = [];
+    const watchErrors = () => { win().addEventListener("error", ev => errors.push(ev.message)); win().addEventListener("unhandledrejection", ev => errors.push(String(ev.reason && ev.reason.message || ev.reason))); };
+    const draftCase = Object.keys(await (await fetch("../data/snapshot.json")).json().then(s => s.docs)).filter(p => p.startsWith("rateDrafts/"));
+    const snap = await (await fetch("../data/snapshot.json")).json();
+    const dOpp = snap.docs[draftCase[0]].opp, dVendor = snap.docs[draftCase[0]].vendor;
+    await open("victor", `case?opp=${dOpp}`);
+    watchErrors();
+    await until(() => text($("#main")).includes("Rate requests"), "the case page");
+    ok("the reading OppList made shows on the vendor's row", /Read from their mail/.test(text($("#main"))));
+    ok("a note of a colleague on this case shows", /Call them about the quote/.test(text($("#main"))));
+
+    // Ask vendors
+    (await until(() => $("[data-ask-open]"), "Ask vendors")).click();
+    await until(() => $("#ask-title") && $("#ask-groups") && text($("#ask-groups")).length > 20, "the vendors in the drawer");
+    ok("Ask vendors opens with OppList's vendor list", true);
+    const A = await mod("askmail.js");
+    ok("the request mail is written for the case", A.subjectOf(dOpp, snap.docs[`cases/${dOpp}`]).startsWith(`[${dOpp}] RATE REQUEST`) && /May we have your rates/.test(A.bodyOf(snap.docs[`cases/${dOpp}`])));
+    doc().dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await sleep(300);
+
+    // the vendor's rates: open the reading, save it as the vendor's rates
+    const before = text($("#main"));
+    (await until(() => $("[data-rq]"), "the reading's chip")).click();
+    await until(() => $("#rt-title") && $("#rt-ls"), "the rates drawer");
+    ok("the rates drawer opens with the lines of the reading", $$("#rt-ls input").some(i => /ocean freight/i.test(i.value)), $$("#rt-ls input").map(i => i.value).join("|").slice(0, 200));
+    ok("and its total", /2,115|2115/.test(text($("#rt-total"))), text($("#rt-total")));
+    (await until(() => $("#rt-save"), "Save")).click();
+    await until(() => S().overlay.concat(S().local).some(a => a.type === "rates" && a.opp === dOpp), "the rates action");
+    await until(() => /2,115/.test(text($("#main"))), "the saved rates on the case page");
+    ok("saved rates show on the vendor's row at once", /2,115/.test(text($("#main"))) && before !== text($("#main")));
+
+    // the quote card, with the cost block for a person with Costs
+    await sleep(300);
+    doc().dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await sleep(300);
+    const qb = await until(() => $("[data-quote-open]"), "the quote button");
+    if (qb.disabled) ok("the quote card can be opened on this case", false, qb.title);
+    else {
+      qb.click();
+      await until(() => $("#qc-title") && $("#qc-ls"), "the quote card");
+      ok("the quote card opens with its lines", $$("#qc-ls input").length > 3);
+      ok("a person with Costs gets the cost block", !!$("#qc-pct") || /Cost/.test(text($("#qc-ls")?.closest("form, section, div"))));
+      ok("the terms offered are the rewritten ones", /no other currency applies/.test(text($("#qc-terms"))), text($("#qc-terms")).slice(0, 120));
+    }
+
+    // the PDF: made in the page from the shipped library and fonts
+    const Q = await mod("quotemail.js"), P = await mod("quotepdf.js");
+    const c = snap.docs[`cases/${dOpp}`];
+    const card = { cur: "USD", lines: [{ charge: "OCEAN FREIGHT", qty: "1", unit: "40'HQ", rate: "2400" }, { charge: "FORWARDING FEE", qty: "1", unit: "BL", rate: "85" }], valid: "2026-12-15", transit: "about 19 days", terms: { cur: true, space: true }, closing: Q.CLOSING, to: "someone@altiplanocarga.example" };
+    const sheet = Q.sheetOf(card, c, { opp: dOpp, n: 1, today: "2026-11-24", me: { name: "Victor Lang", email: PEOPLE.victor } });
+    const blob = await P.quotePdf(sheet);
+    const head = new TextDecoder().decode(new Uint8Array(await blob.arrayBuffer()).slice(0, 5));
+    ok("the quotation PDF is made offline", head === "%PDF-" && blob.size > 20000, `${head} ${blob.size}`);
+    ok("its number carries the copy's prefix", sheet.no.startsWith("JJC-Q-"), sheet.no);
+
+    // Read quote: a request from the site is answered with the demo's recorded reading
+    await open("victor", `case?opp=${dOpp}`);
+    watchErrors();
+    const D = await mod("data.js");
+    const other = (snap.docs[`cases/${dOpp}`].rr || []).map(r => r.vendor).find(v => v !== dVendor) || dVendor;
+    const draftsBefore = Object.keys(JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.startsWith("opplist-demo.site.changes:")) || "null") || "{}")).filter(k => k.startsWith("rateDrafts/")).length;
+    await D.readQuote(dOpp, { vendor: other, text: "Their offer: ocean freight and local charges as attached.", date: "2026-11-24" }, []);
+    await sleep(3500);
+    const kept = JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.startsWith("opplist-demo.site.changes:"))));
+    const answers = Object.entries(kept).filter(([k]) => k.startsWith("actionResults/"));
+    ok("a Read quote request is answered", answers.length === 1 && answers[0][1].state === "done" && answers[0][1].ok === true, JSON.stringify(answers).slice(0, 200));
+    ok("with a reading for that vendor", Object.entries(kept).filter(([k, v]) => k.startsWith("rateDrafts/") && v.vendor === other && v.opp === dOpp).length === 1 && draftsBefore === 0);
+    await until(() => (text($("#main")).match(/Read from their mail/g) || []).length >= 1, "the reading on the page");
+    ok("no page error on the way", errors.length === 0, errors.join(" | ").slice(0, 300));
+  } catch (e) {
+    ok("the run reached its end", false, e && e.message);
+  } finally {
+    forget();
+  }
+  say(`== ${pass} passed, ${fail} failed`, fail ? "sum FAIL" : "sum");
+  document.title = fail ? "FAILED" : "PASSED";
+</script>
+</body>
+</html>

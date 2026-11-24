@@ -1,0 +1,892 @@
+{% extends "base.html" %}
+{% from "_status.html" import status_label %}
+{% from "_status_fields.html" import act_fields, rate_used_fields with context %}
+{% macro route_letters(ids) -%}
+  {%- set chosen = (ids or '').split(',')|select|map('int')|list -%}
+  {%- if not chosen %}All{% else %}{{ live_routes|selectattr('id', 'in', chosen)|map(attribute='letter')|join(', ') or 'All' }}{% endif -%}
+{%- endmacro %}
+{% macro route_ticks_for(fid, ids) -%}
+  {%- set chosen = (ids or '').split(',')|select|map('int')|list -%}
+  {%- set fa = (' form="' ~ fid ~ '"') if fid else '' -%}
+  <span class="route-ticks"><input type="hidden" name="routes_present" value="1"{{ fa|safe }}>
+  {%- for r in live_routes %}<label class="tick"><input type="checkbox" name="route" value="{{ r.id }}"{{ fa|safe }} {% if not chosen or r.id in chosen %}checked{% endif %}> {{ r.letter }}</label>{% endfor %}</span>
+{%- endmacro %}
+{% block title %}{{ values.get('opp_no') }}{% endblock %}
+{% block main_class %}case-page{% endblock %}
+{% block content %}
+{# The case page, v3 (15a, export-preview/OppList_CaseV3_SAMPLE.html marks
+   1 and 2). Every data unit - the Request card, each route, each cargo
+   line, each vendor row, Rate used, Special handling - shows plain text
+   and has its own Edit, which turns that unit into inputs with Save and
+   Cancel inside it; each posts only its own fields to its own route. There
+   is no page-level save and no form spanning cards. Status is a row of
+   actions, each opening only its own fields. app.js (case page v3) sends
+   every write through fetch and then reads the page again, replacing
+   every part that is not being edited. #}
+{% set ctx = case_ctx %}
+{% set st = values.get('status') %}
+{% set live_vendors = vendors|rejectattr('voided')|list %}
+<noscript><style>.case-page .u-edit[hidden] { display: block !important; } .case-page tr.u-edit[hidden] { display: table-row !important; }</style></noscript>
+
+{# ---- macros used further down (defined first: Jinja binds them in order) ---- #}
+
+{# One line per event; its edit opens under it and saves only that event. #}
+{% macro event_row(e) %}
+    <li class="event {{ 'voided' if e.voided else 'unit' }} kind-{{ e.kind }}"{% if not e.voided %} data-unit="event-{{ e.id }}" data-unit-name="Timeline {{ e.at }}"{% endif %}>
+      <div class="event-line">
+        <span class="mono when">{{ e.at }}</span><span class="muted small wd">{{ e.at|weekday }}</span>
+        {% if e.kind == 'note' %}<span class="pill muted-pill">{{ t.note }}</span>
+        {% elif e.kind == 'followup' and e.id in (wait_fu_ids or ()) %}<span class="pill step">FU{{ e.seq }} &middot; our question</span> <span class="muted small">{{ e.channel }}</span>
+        {% elif e.kind == 'followup' %}<span class="pill step">FU{{ e.seq }} &middot; {{ e.channel }} &middot; {{ e.at|md }}</span>
+        {% elif e.kind == 'ack' %}<span class="pill step">Acknowledged</span>
+        {% elif e.kind == 'requote' %}<span class="pill s-{{ e.status|lower }}">{{ e.status }}</span> <span class="pill step">re-quote{% if e.reason %} &middot; {{ e.reason }}{% endif %}</span>
+        {% else %}<span class="pill s-{{ e.status|lower }}">{{ e.status }}</span>{% if e.reason %} <span class="pill muted-pill reason">{{ e.reason }}</span>{% endif %}{% endif %}
+        {# Q3: [quote:<id>] a link to its row on the Quotes card, hidden when the quote is not in OppList #}
+        {% if e.note %}<span class="note" title="{{ e.note|hide_quote }}">{{ e.note|quote_note(quote_marks if quote_marks is defined else none) }}</span>{% endif %}
+        {% if e.approx %}<span class="pill warn">approx</span>{% endif %}
+        {% if e.source and e.source != 'manual' %}<span class="pill muted-pill src">{% if e.source == 'web' and e.id in (site_by or {}) %}team site &middot; {{ site_by[e.id] }}{% else %}{{ e.source }}{% endif %}</span>{% endif %}{% if e.id in (edited_events or ()) %} <span class="pill tone-amber src edited">edited</span>{% endif %}
+        {% if e.voided %}
+          <span class="pill muted-pill">{{ t.voided }}</span>
+          <form method="post" class="inline-form"
+                action="{{ url_for('enquiry_event', enquiry_id=enquiry_id, event_id=e.id) }}">
+            <button class="link tiny" name="action" value="unvoid">{{ t.unvoid }}</button>
+          </form>
+        {% else %}
+          <button type="button" class="link tiny edit u-edit-btn" data-edit>{{ t.edit }}</button>
+        {% endif %}
+      </div>
+      {% if not e.voided %}
+      <form method="post" class="event-row u-form u-edit" id="event-{{ e.id }}" hidden
+            action="{{ url_for('enquiry_event', enquiry_id=enquiry_id, event_id=e.id) }}">
+        <input type="date" name="at" value="{{ e.at }}" aria-label="Date">
+        <select name="status" aria-label="Status">
+          {# Sourcing is retired: only a past Sourcing event shows it, as its own value #}
+          {% for s in (['Sourcing'] if e.status == 'Sourcing' else []) + ['New','Quoted','Won','Lost','Cancelled','Dropped'] %}
+            <option value="{{ s }}" {% if e.status == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+        {# the reason (v22), from the list that fits this event's status #}
+        {% set vocab = closed_reasons_lost if e.status == 'Lost' else (closed_reasons_cancelled if e.status == 'Cancelled' else (closed_reasons_dropped if e.status == 'Dropped' else (requote_reasons if (e.status == 'Quoted' or e.kind == 'requote') else []))) %}
+        {% if vocab %}
+        <select name="reason" aria-label="Reason">
+          <option value="">{{ t.reason_none }}</option>
+          {% for r in vocab %}<option value="{{ r }}" {% if e.reason == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+          {% if e.reason and e.reason not in vocab %}<option value="{{ e.reason }}" selected>{{ e.reason }}</option>{% endif %}
+        </select>
+        {% endif %}
+        <input name="note" value="{{ e.note or '' }}" placeholder="{{ t.note }}">
+        {# FX1: the event that closes a Lost case carries the case's two prices #}
+        {% if e.id == lost_event_id %}
+        <label class="ev-price"><span class="muted small">{{ t.their_price }}</span><input name="lost_their_price" value="{{ values.get('lost_their_price') or '' }}" placeholder="{{ t.their_price_ph }}"></label>
+        <label class="ev-price"><span class="muted small">{{ t.our_price }}</span><input name="lost_our_price" value="{{ values.get('lost_our_price') or '' }}" placeholder="{{ t.our_price_ph }}"></label>
+        {% endif %}
+        <button class="button primary" name="action" value="save">{{ t.save }}</button>
+        <button type="button" class="button" data-cancel>{{ t.cancel }}</button>
+        <button class="link" name="action" value="void">{{ t.void }}</button>
+      </form>
+      {% endif %}
+    </li>
+{% endmacro %}
+
+{# the status actions (15a, mark 2): what each status offers, one open at a time #}
+{% if st == 'Won' %}{% set acts = ['cancelled', 'note'] %}
+{% elif st in ('Lost', 'Cancelled', 'Dropped') %}{% set acts = ['note'] %}
+{% elif st == 'Quoted' %}{% set acts = ['requoted', 'won', 'lost', 'cancelled', 'hold', 'note'] %}
+{% elif st == 'New' and not values.get('handled_by') %}{% set acts = ['quoted', 'waiting', 'won', 'lost', 'cancelled', 'hold', 'note'] %}
+{% else %}{% set acts = ['quoted', 'won', 'lost', 'cancelled', 'hold', 'note'] %}{% endif %}
+{% set act_labels = {'quoted': t.act_quoted, 'requoted': t.requote, 'won': t.act_won, 'lost': t.act_lost,
+                     'cancelled': t.act_cancelled, 'hold': t.on_hold, 'note': t.note,
+                     'waiting': 'Waiting for requester'} %}
+{% macro act_foot(label) %}
+  <div class="foot"><button class="button primary" type="submit">{{ label }}</button>
+    <button type="button" class="button" data-cancel>{{ t.cancel }}</button></div>
+{% endmacro %}
+
+<div data-part="saved-banner">
+{% if request.args.get('saved') %}
+  <section class="saved-banner" role="status" data-clear-draft="new-enquiry">
+    {{ t.saved_banner }} {{ request.args.get('saved') }}
+  </section>
+{% endif %}
+</div>
+
+<div class="crumbs"><a href="{{ url_for('enquiries') }}">{{ t.crumb_enquiries }}</a> &rsaquo; <b>{{ values.get('opp_no') }}</b></div>
+
+{# a refused save without the page's script comes back here, field by field #}
+<section class="not-saved" id="not-saved" role="alert" {% if not error_items %}hidden{% endif %}>
+  <b>{{ t.not_saved }}</b> <span class="muted">{{ t.not_saved_hint }}</span>
+  <ul>{% for e in error_items %}<li><a href="#{{ e.anchor }}">{{ e.label }}</a>: {{ e.message }}</li>{% endfor %}</ul>
+</section>
+
+{# ------------------------------------------------------------ header ---- #}
+{# The card sticks under the top bar. The sentinel's marker is moved one
+   card-height down the page by the script; once it passes the top bar the
+   card is 'condensed'. Nothing else depends on it. #}
+<div class="head-sentinel" aria-hidden="true"><span id="head-sentinel"></span></div>
+<div class="card head" id="head">
+  <div class="headgrid">
+    <div class="headtext">
+      {# AL1: the number copies '[OPP-1504] ' for the acknowledgement's subject; WA1: it leads the
+         title, so the condensed header still says which case this is, and it is never cut #}
+      <h1><span class="h-opp"><b class="opp-copy" role="button" tabindex="0" data-copy-opp="[{{ values.get('opp_no') }}] "
+          title="Click to copy [{{ values.get('opp_no') }}]">{{ values.get('opp_no') }}</b><span class="opp-copied" aria-live="polite" hidden>Copied</span></span>
+        {# a case with no places is titled by its number: said once #}
+        {% set h_title = routes_title or ctx.title %}
+        {% if h_title and h_title != values.get('opp_no') %}<span class="h-dot">&middot;</span> <span class="h-title">{{ h_title }}</span>{% endif %}
+        {{ status_label(st, values.get('handled_by'), 'pill big', values.get('legacy')) }}
+        {% if live_routes|length > 1 %}<span class="pill muted-pill routes-n">{{ t.routes_n.format(live_routes|length) }}</span>{% endif %}
+        {# shown only while condensed (v2e): the case stays identifiable #}
+        <span class="cond-line">{% if ctx.condensed.requester %}<span class="req-box">{{ ctx.condensed.requester }}</span>{% endif %}
+          {%- if ctx.condensed.mode %}<span class="lbl tone-{{ ctx.condensed.mode_tone }}">{{ ctx.condensed.mode }}</span>{% endif %}
+          {%- if ctx.condensed.incoterm %}<span class="dark">{{ ctx.condensed.incoterm }}</span>{% endif %}
+          {%- if ctx.condensed.lane %}<span class="sep">&middot;</span><span class="dark">{{ ctx.condensed.lane }}</span>{% endif %}</span>
+        {% if values.get('in_requote') %}<span class="pill s-sourcing requote">{{ t.requote_round.format(n=(values.get('quote_rounds') or 0) + 1) }}</span>{% elif (values.get('quote_rounds') or 0) >= 2 %}<span class="pill s-sourcing requote">{{ t.requote_round.format(n=values.get('quote_rounds')) }}</span>{% endif %}
+        {% if ctx.mode_pill %}<span class="pill tone-{{ ctx.condensed.mode_tone }}">{{ ctx.mode_pill }}</span>{% endif %}
+        {% if values.get('incoterm') %}<span class="pill p-mode">{{ values.get('incoterm') }}</span>{% endif %}
+        {% if values.get('scope') == 'Out' %}<span class="pill tone-amber out-of-scope">{{ t.out_of_scope }}</span>{% endif %}
+        {# SC1: LATAM when the case is (her choice when she made one); nothing when it is not #}
+        {% if values.get('latam') == 'Y' %}<span class="pill latam-chip" id="latam-chip">{{ t.latam_by_hand if values.get('latam_choice') == 'Y' else t.latam_chip }}</span>{% endif %}
+        {% if mfn %}<span class="pill mfn-chip" id="mfn-chip">MFN</span>{% endif %}
+        {% if not values.get('status_confirmed') %}<span class="pill warn">{{ t.unconfirmed_badge }}</span>
+          <form method="post" class="inline-form" action="{{ url_for('enquiry_confirm', enquiry_id=enquiry_id) }}">
+            <button class="link tiny" type="submit" title="{{ t.confirm_hint }}">{{ t.confirm }}</button>
+          </form>{% endif %}
+        {% if values.get('hold_reason') %}<span class="pill s-sourcing hold" title="on hold: {{ values.get('hold_reason') }}">on hold</span>{% endif %}
+      </h1>
+      <div class="sub">requester {% if values.get('requester_party_id') %}<a class="req-box" href="{{ url_for('party', party_id=values.get('requester_party_id')) }}">{{ values.get('requester_key') }}</a>{% else %}<b>-</b>{% endif %}
+        {% if values.get('commodity') %}&middot; {{ values.get('commodity') }}{% endif %}
+        {% if values.get('direction') %}&middot; {{ values.get('direction')|direction }}{% endif %}
+        {% if values.get('closed_on_any') and not values.get('closed_on') %}<span class="pill warn">closing date approximate</span>{% endif %}
+      </div>
+    </div>
+    <div class="actions">
+      {% if ack_state and ack_state.open_title %}
+        <form method="post" class="inline-form" action="{{ url_for('enquiry_open_in_outlook', enquiry_id=enquiry_id) }}">
+          <button class="button" type="submit">{{ t.open_in_outlook }}</button>
+        </form>
+      {% endif %}
+      {# FX4: no Ask for feedback (she has her own template tool). FX5: Acknowledge
+         again, blank - a Reply All with the case number, her signature only #}
+      {% if ack_state and ack_state.show %}
+        <form method="post" class="inline-form" action="{{ url_for('enquiry_acknowledge', enquiry_id=enquiry_id) }}">
+          <button class="button" type="submit">Acknowledge</button>
+        </form>
+      {% elif values.get('entry_id') and ack_state and ack_state.acknowledged_on %}
+        <span class="ack-on muted small">Acknowledged {{ ack_state.acknowledged_on|day }}</span>
+      {% endif %}
+      <form method="post" class="inline-form" id="update-outlook"
+            action="{{ url_for('enquiry_update_from_outlook', enquiry_id=enquiry_id) }}">
+        <button class="button" type="submit" title="{{ t.update_from_outlook_hint }}">{{ t.update_from_outlook }}</button>
+      </form>
+      {% if st == 'Won' and shipments_on %}
+        {# the shipment: one per won case; started here, then opened - a navigation;
+           FX3: not while shipments are switched off #}
+        {% if shipment_id %}
+          <a class="button" href="{{ url_for('shipment_page', shipment_id=shipment_id) }}">{{ t.open_shipment }}</a>
+        {% else %}
+          <form method="post" class="inline-form" data-nav action="{{ url_for('shipment_start', enquiry_id=enquiry_id) }}">
+            <button class="button" type="submit">{{ t.start_shipment }}</button>
+          </form>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  {# five tiles that depend on the status: built in
+     _case_context, rendered the same way whatever they say #}
+  <div class="facts">
+    {% for f in ctx.facts %}
+    <div class="fact{{ ' due' if f.due else '' }}"><div class="f-l">{{ f.label }}</div>
+      <div class="f-v{{ ' mono' if f.mono else '' }}">{{ f.value }}</div>
+      <div class="f-s">{{ f.sub }}</div></div>
+    {% endfor %}
+    {# v33: what each route came to, and a project's volume #}
+    {% if live_routes|length > 1 %}
+    <div class="fact result"><div class="f-l">{{ t.fact_result }}</div>
+      <div class="f-v">{{ result_on|day if result_on else '-' }}</div>
+      <div class="f-s">{{ result_line or t.no_result }}</div></div>
+    {% endif %}
+    {% if volume_fact %}
+    <div class="fact volume"><div class="f-l">{{ t.fact_volume }}</div>
+      <div class="f-v">{{ volume_fact.value }}</div>
+      <div class="f-s">{{ volume_fact.sub }}</div></div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="layout">
+  {# --------------------------------------------------------- rail ---- #}
+  <aside class="rail"><div class="rail-card">
+    <h2>{{ t.on_this_page }}</h2>
+    {# the same order as the main column (v2b): what changes every day
+       first, what was typed at registration after. A tick means the
+       data-entry card is complete; the other entries say where the case
+       stands; a blue dot, a unit edited and not saved (15a). #}
+    <ol class="sections">
+      {% set rail_keys = [('status', t.sec_status), ('followups', t.sec_followups),
+                          ('request', t.sec_request), ('routes', t.sec_routes), ('cargo', t.sec_cargo),
+                          ('vendors', t.sec_vendors)] %}
+      {% if st == 'Won' %}{% set rail_keys = rail_keys + [('won', t.who_won)] %}{% endif %}
+      {% for key, label in rail_keys + [('mail', t.sec_mail)] %}
+        <li class="sec {{ 'ok' if ctx.ticks.get(key) else '' }}"><a href="#{{ key }}"><span class="mark">{% if ctx.ticks.get(key) %}&#10003;{% endif %}</span><span class="s-name">{{ label }}</span>{% if ctx.states.get(key) %}<span class="state">{{ ctx.states[key] }}</span>{% endif %}</a></li>
+      {% endfor %}
+    </ol>
+    <div class="next">
+      <h2>{{ t.next_step }}</h2>
+      {% if ctx.next_step.kind == 'ladder' and ctx.ladder.next %}
+        <div class="n-title{{ ' due' if ctx.due else '' }}">{{ ctx.ladder.next }} {{ ctx.ladder.next_due|weekday }} {{ ctx.ladder.next_due|day }}</div>
+        <div class="n-sub">{% if ctx.ladder.days_left %}{{ t.in_working_days.format(n=ctx.ladder.days_left) }}{% else %}{{ t.due_now }}{% endif %}</div>
+        {% if ctx.ladder.next_seq %}<a class="button small-button" href="#followups">{{ t.log_fu_n.format(n=ctx.ladder.next_seq) }}</a>{% endif %}
+      {% elif ctx.next_step.kind == 'ladder' %}<div class="n-sub">-</div>
+      {% else %}
+        {# New: the tracking line; closed: 'Closed · Won 10 Sep'. No draft. #}
+        <div class="n-title">{{ ctx.next_step.title or '-' }}</div>
+        {% if ctx.next_step.sub %}<div class="n-sub">{{ ctx.next_step.sub }}</div>{% endif %}
+      {% endif %}
+    </div>
+  </div>
+  </aside>
+
+  <div class="stack">
+    {# Order (v2e, fixed whatever the status): Status | Follow-ups, then
+       Request, Routes, Cargo, then Rate requests, Rate used (Won cases
+       only), the threads and the Mail card last. #}
+    <div class="two">
+      {# --------------------------------------------------- status ---- #}
+      <section class="card sec-card status-panel" id="status">
+        <h2>{{ t.sec_status }}</h2>
+        <div class="current-status">
+          <span class="label">{{ t.current_status }}</span>
+          {{ status_label(st, values.get('handled_by'), 'pill big', values.get('legacy')) }}
+          {% if values.get('in_requote') %}<span class="pill s-sourcing requote">{{ t.requote_round.format(n=(values.get('quote_rounds') or 0) + 1) }}</span>{% elif (values.get('quote_rounds') or 0) >= 2 %}<span class="pill s-sourcing requote">{{ t.requote_round.format(n=values.get('quote_rounds')) }}</span>{% endif %}
+          {% if values.get('closed_reason') %}<span class="muted">{{ values.get('closed_reason') }}</span>{% endif %}
+          {% if st == 'Lost' and (values.get('lost_their_price') or values.get('lost_our_price')) %}
+            <span class="muted small lost-prices">{{ t.their_price }} {{ values.get('lost_their_price') or '?' }} &middot; {{ t.our_price }} {{ values.get('lost_our_price') or '?' }}</span>
+          {% endif %}
+          {# since = the latest live status or requote event, not last_event_on
+             (a note or a follow-up would move it; batch 3, 0b) #}
+          {% if ctx.since %}<span class="muted since">since {{ ctx.since|nice_date }}{% if ctx.to_quote is not none and quoted_on %} &middot; {{ t.receipt_to_quote.format(n=ctx.to_quote) }}{% endif %}</span>{% endif %}
+          {% if values.get('hold_reason') %}
+            {% set hold_full = 'on hold: ' ~ values.get('hold_reason') ~ (' · until ' ~ values.get('hold_until') if values.get('hold_until') else '') %}
+            <span class="pill s-sourcing hold" title="{{ hold_full }}">on hold: {{ values.get('hold_reason')|cut(80) }}{% if values.get('hold_until') %} &middot; until {{ values.get('hold_until') }}{% endif %}</span>
+            <form method="post" class="inline-form"
+                  action="{{ url_for('enquiry_release_hold', enquiry_id=enquiry_id) }}">
+              <button class="link tiny" type="submit">{{ t.release_hold }}</button>
+            </form>
+          {% endif %}
+        </div>
+
+        {% if ctx.waiting %}
+          {# WR1: we asked the requester for details; Info received ends the wait #}
+          <div class="wait-line" id="waiting">
+            <span class="pill s-sourcing wait" title="{{ ctx.waiting.what }}">waiting for requester since {{ ctx.waiting.since|day }}</span>
+            <span class="muted small">{{ ctx.waiting.what|cut(120) }}</span>
+            <form method="post" class="inline-form" action="{{ url_for('enquiry_status', enquiry_id=enquiry_id) }}">
+              <input type="hidden" name="status" value="info_received">
+              <button class="link tiny" type="submit">Info received</button>
+            </form>
+          </div>
+        {% endif %}
+        <div class="acts-row">
+          {% for a in acts %}<button type="button" class="act" data-act="{{ a }}">{{ act_labels[a] }}</button>{% endfor %}
+        </div>
+        {% set status_url = url_for('enquiry_status', enquiry_id=enquiry_id) %}
+        {% if 'quoted' in acts %}
+        <div class="unit act-unit" data-unit="act-quoted" data-unit-name="{{ t.act_quoted }}" data-act-form="quoted">
+          <form method="post" class="u-form u-edit af" novalidate action="{{ status_url }}" hidden>
+            <input type="hidden" name="status" value="Quoted">
+            {{ act_fields('quoted', {}) }}
+            {{ act_foot(t.record_quote) }}
+          </form>
+        </div>
+        {% endif %}
+        {% if 'requoted' in acts %}
+        <div class="unit act-unit" data-unit="act-requoted" data-unit-name="{{ t.requote }}" data-act-form="requoted">
+          <form method="post" class="u-form u-edit af requote-form" id="requote-form" novalidate action="{{ url_for('enquiry_requote', enquiry_id=enquiry_id) }}" hidden>
+            {{ act_fields('requoted', {}) }}
+            {{ act_foot(t.record_requote) }}
+          </form>
+        </div>
+        {% endif %}
+        {% if 'won' in acts %}
+        <div class="unit act-unit" data-unit="act-won" data-unit-name="{{ t.act_won }}" data-act-form="won">
+          <form method="post" class="u-form u-edit af" novalidate action="{{ status_url }}" hidden>
+            <input type="hidden" name="status" value="Won">
+            {# Q3: Rate used starts from the last quote when no request is awarded #}
+            {{ act_fields('won', won_prefill if won_prefill is defined else {'rate_used': 'agent' if live_vendors else 'own'}) }}
+            {{ act_foot(t.record_win) }}
+          </form>
+        </div>
+        {% endif %}
+        {% if 'lost' in acts %}
+        <div class="unit act-unit" data-unit="act-lost" data-unit-name="{{ t.act_lost }}" data-act-form="lost">
+          <form method="post" class="u-form u-edit af" novalidate action="{{ status_url }}" hidden>
+            <input type="hidden" name="status" value="Lost">
+            {{ act_fields('lost', {}) }}
+            {{ act_foot(t.record_loss) }}
+          </form>
+        </div>
+        {% endif %}
+        {% if 'cancelled' in acts %}
+        <div class="unit act-unit" data-unit="act-cancelled" data-unit-name="{{ t.act_cancelled }}" data-act-form="cancelled">
+          <form method="post" class="u-form u-edit af" novalidate action="{{ status_url }}" hidden>
+            <input type="hidden" name="status" value="Cancelled">
+            {{ act_fields('cancelled', {}) }}
+            {{ act_foot(t.record_cancel) }}
+          </form>
+        </div>
+        {% endif %}
+        {% if 'waiting' in acts %}
+        <div class="unit act-unit" data-unit="act-waiting" data-unit-name="Waiting for requester" data-act-form="waiting">
+          <form method="post" class="u-form u-edit af" novalidate action="{{ status_url }}" hidden>
+            <input type="hidden" name="status" value="waiting">
+            <div class="row"><label class="f"><span>{{ t.date }}</span><input type="date" name="at" value="{{ today }}" required></label>
+              <label class="f grow"><span>What we need</span><input name="what" maxlength="{{ wait_max }}" required
+                value="{{ ctx.waiting.what if ctx.waiting else wait_prefill }}" placeholder="the dimensions of each piece; the pickup address"></label></div>
+            <p class="muted small">Separate the items with ; - each goes on its own line in the chasers.{% if ctx.waiting %} Saving replaces the wait on the case.{% endif %}</p>
+            {{ act_foot('Wait for the requester') }}
+          </form>
+        </div>
+        {% endif %}
+        {% if 'hold' in acts %}
+        <div class="unit act-unit" data-unit="act-hold" data-unit-name="{{ t.on_hold }}" data-act-form="hold">
+          <form method="post" class="u-form u-edit af" novalidate action="{{ status_url }}" hidden>
+            <input type="hidden" name="status" value="hold"><input type="hidden" name="at" value="{{ today }}">
+            <div class="row"><label class="f grow"><span>{{ t.why }}</span><input name="hold_reason" required></label>
+              <label class="f"><span>{{ t.until }}</span><input type="date" name="hold_until" class="hold-until" min="{{ tomorrow }}" required>
+                <span class="qk"><button type="button" data-days="14">{{ t.plus_2_weeks }}</button><button type="button" data-months="1">{{ t.plus_1_month }}</button><button type="button" data-eom>{{ t.end_of_month }}</button></span></label></div>
+            {{ act_foot(t.put_on_hold) }}
+          </form>
+        </div>
+        {% endif %}
+        <div class="unit act-unit" data-unit="act-note" data-unit-name="{{ t.note }}" data-act-form="note">
+          <form method="post" class="u-form u-edit af" novalidate action="{{ status_url }}" hidden>
+            <input type="hidden" name="status" value="note">
+            {{ act_fields('note', {}) }}
+            {{ act_foot(t.add_note_btn) }}
+          </form>
+        </div>
+
+        {# batch 14 item 7: the attachments of the mail Update from Outlook read #}
+        {% if att_panel %}
+          <div class="suggested att-panel" id="attachments">
+            <h3>Attachments of the mail</h3>
+            <p class="small">{{ att_panel.names|join(', ') }}
+              {% if not att_panel.read %}&middot; <a href="{{ url_for('enquiry', enquiry_id=enquiry_id, att=1) }}#attachments">Read attachments</a>{% endif %}</p>
+            {% if att_panel.error %}<p class="vendor-note">{{ att_panel.error }}</p>{% endif %}
+            {% if att_panel.read and not att_panel.error %}
+              {% if att_panel.findings %}
+              <table class="grid tight suggestions">
+                <thead><tr><th>{{ t.col_suggestion }}</th><th>{{ t.col_evidence }}</th><th>{{ t.col_actions }}</th></tr></thead>
+                <tbody>
+                {% for f in att_panel.findings %}
+                  <tr class="suggestion kind-{{ f.kind }}">
+                    <td>{% if f.kind == 'check' %}<span class="pill chk-pill">check</span> {% endif %}{{ f.text }}</td>
+                    <td class="muted small">{{ f.source }}</td>
+                    <td>
+                      <form method="post" action="{{ url_for('enquiry_attachment_accept', enquiry_id=enquiry_id) }}" class="row-actions">
+                        <input type="hidden" name="finding" value="{{ f|tojson|forceescape }}">
+                        <input type="hidden" name="skip" value="{{ att_panel.skip }}">
+                        <button class="button primary" type="submit">{{ 'Add as note' if f.kind in ('check', 'note') else 'Accept' }}</button>
+                      </form>
+                      <a class="button" href="{{ url_for('enquiry', enquiry_id=enquiry_id, att=1, skip=(att_panel.skip ~ ',' ~ f.key).strip(',')) }}#attachments">Dismiss</a>
+                    </td>
+                  </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+              {% else %}<p class="muted small">Nothing in the attachments to add to the case.</p>{% endif %}
+              {% if att_panel.unread %}<p class="muted small">Not read: {% for u in att_panel.unread %}{{ u.name }} ({{ u.reason }}){% if not loop.last %}; {% endif %}{% endfor %}</p>{% endif %}
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% from "_suggestions.html" import suggestion_block with context %}
+        {{ suggestion_block(sugg_items, sugg_dismissed, url_for('enquiry', enquiry_id=enquiry_id)) }}
+
+        {# the route hands the events newest first; that is the order shown (v2b) #}
+        {% set live_events = events|rejectattr('voided')|list %}
+        {% set voided_events = events|selectattr('voided')|list %}
+        <h3 class="tl-head">{{ t.timeline_h }}</h3>
+        <ol class="timeline">
+          {# D7b: a change made on the team site is one line among the events (from change_log) #}
+          {% if timeline_items is not defined %}
+          {% for e in live_events %}{{ event_row(e) }}{% endfor %}
+          {% else %}
+          {% for kind, e in timeline_items %}
+            {% if kind == 'edit' %}
+            <li class="event site-edit">
+              <div class="event-line">
+                <span class="mono when">{{ e.at }}</span><span class="muted small wd">{{ e.at|weekday }}</span>
+                <span class="pill muted-pill">Cargo &amp; Route</span>
+                <span class="note">{{ e.text }}</span>
+                <span class="pill muted-pill src">team site &middot; {{ e.by }}{% if e.accepted %} &middot; accepted by {{ e.accepted }}{% endif %}</span>
+              </div>
+            </li>
+            {% else %}{{ event_row(e) }}{% endif %}
+          {% endfor %}
+          {% endif %}
+        </ol>
+        {% if voided_events %}
+          <details class="voided-events">
+            <summary>{{ t.show_voided.format(n=voided_events|length) }}</summary>
+            <ol class="timeline">
+              {% for e in voided_events %}{{ event_row(e) }}{% endfor %}
+            </ol>
+          </details>
+        {% endif %}
+      </section>
+
+      {# ------------------------------------------------ follow-ups ---- #}
+      <section class="card sec-card followup" id="followups">
+        <h2>{{ t.sec_followups }}
+          {% if fu_count_total > fu_count %}<span class="muted small">{{ t.fu_total.format(n=fu_count_total) }}</span>{% endif %}</h2>
+        {% if ctx.direct %}
+          {# batch 21: a direct customer is never chased - one line, no ladder, no draft #}
+          <p class="muted dc-line">{{ t.dc_no_followups }}</p>
+        {% elif ctx.closed %}
+          {# a closed case has nothing to chase: one line, no ladder, no draft (batch 3, 0c) #}
+          <p class="muted closed-line">{{ t.closed_nothing.format(at=ctx.closed|day) }}</p>
+        {% elif ctx.ladder.steps %}
+          <div class="ladder">
+            {% for label, date, state in ctx.ladder.steps %}
+              {% if not loop.first %}<span class="l-bar {{ 'on' if state == 'done' else '' }}"></span>{% endif %}
+              <span class="l-step {{ state }}{% if state == 'now' and ctx.due %} due{% endif %}">{{ label }}{% if date %} {{ date|day }}{% endif %}</span>
+            {% endfor %}
+          </div>
+        {% else %}<p class="muted small">{{ t.not_quoted_yet }}</p>{% endif %}
+        {% if followups %}
+          <table class="tbl fu-list">
+            <thead><tr><th>#</th><th>{{ t.col_date }}</th><th>{{ t.col_channel }}</th><th>{{ t.note }}</th></tr></thead>
+            <tbody>
+              {% for f in followups %}
+                <tr class="{{ 'voided' if f.voided else '' }}">
+                  <td class="mono">FU{{ f.seq }}{% if f.id in (wait_fu_ids or ()) %} <span class="muted small">our question</span>{% endif %}</td><td class="mono">{{ f.at }}</td>
+                  <td>{{ f.channel }}</td>
+                  <td>{{ f.note or '' }}{% if f.voided %} <span class="pill muted-pill">{{ t.voided }}</span>{% endif %}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% elif not ctx.direct %}
+          <p class="muted">{{ t.no_followups }}</p>
+        {% endif %}
+        {% if ctx.closed or ctx.direct %}
+        {% else %}
+        {# FX4: no draft - the date and how it went out, logged as the next FU #}
+        <form method="post" class="row-form fu-log" id="fu-log" action="{{ url_for('enquiry_followup', enquiry_id=enquiry_id) }}">
+          <span class="k">FU{{ fu_step }}</span>
+          <input type="date" name="at" value="{{ today }}" aria-label="Date">
+          {% for value, label in fu_channels %}<button class="button{{ ' primary' if loop.first else '' }}" name="channel" value="{{ value }}" type="submit">{{ label }}</button>{% endfor %}
+        </form>
+        {% endif %}
+        {% if values.get('status') == 'Quoted' %}
+          {# FX4: Waiting on us, logged by hand (or on the team site); Answered clears it.
+             D7c: a direct customer's case too (her choice A) - only the question, no ladder #}
+          <div class="waiting-on-us" id="waiting-on-us">
+          {% if waiting_on_us %}
+            <p class="fu-replied"><strong>Waiting on us since {{ waiting_on_us[0]|day }}:</strong>
+              <span title="{{ waiting_on_us[1]|hide_mid }}">{{ waiting_gist }}</span></p>
+            <form method="post" class="row-form" id="answered-form" action="{{ url_for('enquiry_answered', enquiry_id=enquiry_id) }}">
+              <input type="date" name="at" value="{{ today }}" aria-label="Answered on">
+              <input name="note" maxlength="{{ answer_max }}" placeholder="What we answered (optional)" aria-label="What we answered" class="sel">
+              <button class="button primary" type="submit">Answered</button>
+            </form>
+          {% else %}
+            <form method="post" class="row-form" id="waiting-form" action="{{ url_for('enquiry_waiting_on_us', enquiry_id=enquiry_id) }}">
+              <span class="k">Waiting on us</span>
+              <input type="date" name="at" value="{{ today }}" aria-label="Asked on">
+              <input name="what" maxlength="{{ what_max }}" required placeholder="What they asked" aria-label="What they asked" class="sel">
+              <select name="who" aria-label="Who">
+                <option value="">{{ values.get('owner') or 'Who' }}</option>
+                {% for o in owners %}{% if o != values.get('owner') %}<option value="{{ o }}">{{ o }}</option>{% endif %}{% endfor %}
+              </select>
+              <button class="button" type="submit">Log</button>
+            </form>
+          {% endif %}
+          </div>
+        {% endif %}
+      </section>
+    </div>
+
+    {# ------------------------------------------------- request ---- #}
+    {% set state = forms.field_state(values.get('service_mode'), values.get('incoterm'), values.get('service_scope')) %}
+    <section class="card sec-card" id="request">
+      <div class="unit req-unit" data-unit="request" data-unit-name="{{ t.sec_request }}">
+        <div class="card-head"><h2>{{ t.sec_request }}</h2><span class="us">&#9679; {{ t.edited_not_saved }}</span>
+          <button type="button" class="button small-button u-edit-btn" data-edit>{{ t.edit }}</button></div>
+        <div class="u-read kv">
+          <div><div class="k">Received on</div><div class="v">{{ values.get('received_on')|day(year=True) or '' }}{% if values.get('received_on') %} <span class="m">{{ values.get('received_on')|weekday }}</span>{% else %}<span class="m">{{ t.not_set }}</span>{% endif %}</div></div>
+          <div><div class="k">Requester</div><div class="v">{% if values.get('requester_party_id') %}<a href="{{ url_for('party', party_id=values.get('requester_party_id')) }}">{{ values.get('requester_key') }}</a>{% if values.get('requester_type') != 'Office' %} <span class="m req-type">{{ values.get('requester_type') or '' }}{% if values.get('requester_country') and values.get('requester_country') != 'Unknown' %}, {{ values.get('requester_country') }}{% endif %}</span>{% endif %}{% else %}<span class="m">{{ t.not_set }}</span>{% endif %}</div></div>
+          <div><div class="k">End customer</div><div class="v">{{ values.get('end_customer') or '' }}{% if not values.get('end_customer') %}<span class="m">{{ t.not_set }}</span>{% endif %}</div></div>
+          <div><div class="k">Handled by</div><div class="v">{{ values.get('handled_by') or home_office }}</div></div>
+          {# AL2: the person (enquiry.owner); DD1: changed here too, under Edit #}
+          <div><div class="k">Assigned to</div><div class="v">{% if values.get('owner') %}{{ values.get('owner') }}{% else %}<span class="m">Not assigned</span>{% endif %}</div></div>
+          <div class="span4"><div class="k">Remarks</div><div class="v pre">{{ values.get('remarks') or '' }}{% if not values.get('remarks') %}<span class="m">{{ t.none_word }}</span>{% endif %}</div></div>
+        </div>
+        {% with who=who_asked, who_case=enquiry_id, who_back=url_for('enquiry', enquiry_id=enquiry_id) ~ '#request' %}{% include "_who_asked.html" %}{% endwith %}
+        <form method="post" class="u-form u-edit" novalidate action="{{ url_for('enquiry', enquiry_id=enquiry_id) }}" hidden>
+          <div class="form-grid four">
+            <label class="f required"><span>Received on</span>
+              <input id="fld-received_on" type="date" name="received_on" value="{{ values.get('received_on') or '' }}"></label>
+            <label class="f required"><span>Requester</span>
+              <select name="requester_party_id" id="requester">
+                <option value="">-</option>
+                {% for p in parties %}
+                  <option value="{{ p.id }}" data-type="{{ p.type }}" {% if values.get('requester_party_id')|string == p.id|string %}selected{% endif %}>{{ p.key }}{% if p.placeholder %} ({{ t.placeholder_badge }}){% endif %}{% if p.prospect %} (prospect){% endif %}</option>
+                {% endfor %}
+              </select>
+              <em class="note">{% if values.get('requester_party_id') %}<a href="{{ url_for('party', party_id=values.get('requester_party_id')) }}">Open party</a> &middot; {% endif %}<button type="button" class="link tiny new-party" data-toggle="new-party">{{ t.new_party_link }}</button></em></label>
+            <fieldset class="inline-add" id="new-party" hidden>
+              <legend>{{ t.new_party }}</legend>
+              <label class="f"><span>Name</span><input name="new_party_key" placeholder="Key, e.g. Tolvex"></label>
+              <label class="f"><span>Type</span><select name="new_party_type">
+                {% for ty in party_types %}<option value="{{ ty }}">{{ ty }}</option>{% endfor %}
+              </select></label>
+              <label class="f"><span>Country</span><select name="new_party_country">
+                {% for c in countries %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
+              </select></label>
+            </fieldset>
+            <label class="f"><span>End customer</span>
+              <input name="end_customer" id="end_customer" value="{{ values.get('end_customer') or '' }}" placeholder="Actual shipper / consignee"></label>
+            {# v31: the office that handles the case; JJC stores nothing #}
+            {% set handled = (values.get('handled_by') or '')|upper %}
+            <label class="f"><span>Handled by</span>
+              <select name="handled_by" id="handled_by">
+                <option value="{{ home_office }}" {% if not handled %}selected{% endif %}>{{ home_office }}</option>
+                {% for code in (office_codes or []) + ([handled] if handled and handled not in (office_codes or []) else []) %}
+                  <option value="{{ code }}" {% if handled == code %}selected{% endif %}>{{ code }}</option>
+                {% endfor %}
+              </select></label>
+            {# DD1: the person - Settings' owners, then Not assigned; written with a change_log row, pushed to the site #}
+            <label class="f"><span>Assigned to</span>
+              <select name="owner" id="fld-owner">
+                {% for o in owners %}<option value="{{ o }}" {% if values.get('owner') == o %}selected{% endif %}>{{ o }}</option>{% endfor %}
+                {% if values.get('owner') and values.get('owner') not in owners %}<option value="{{ values.get('owner') }}" selected>{{ values.get('owner') }}</option>{% endif %}
+                <option value="" {% if not values.get('owner') %}selected{% endif %}>Not assigned</option>
+              </select></label>
+            <label class="f wide"><span>Remarks</span>
+              <textarea id="fld-remarks" name="remarks" rows="3">{{ values.get('remarks') or '' }}</textarea></label>
+            <label class="f wide"><span>{{ t.registered_subject }}</span>
+              <input id="fld-source_subject" name="source_subject" class="mono" value="{{ values.get('source_subject') or '' }}"></label>
+          </div>
+          <div class="foot"><button class="button primary" type="submit">{{ t.save }}</button>
+            <button type="button" class="button" data-cancel>{{ t.cancel }}</button></div>
+        </form>
+      </div>
+
+      {# Subjects: the registered one first, then every thread
+         attached by hand; Strike out and Add subject save when pressed, in
+         or out of Edit, and touch nothing in the card's inputs. #}
+{% macro shared_line(items) %}{% for o in items %}<span class="shared-line muted small">{% if o.same_day %}shared with <a href="{{ url_for('enquiry', enquiry_id=o.id) }}" class="mono">{{ o.opp_no }}</a>, registered the same day{% else %}also <a href="{{ url_for('enquiry', enquiry_id=o.id) }}" class="mono">{{ o.opp_no }}</a>'s ({{ o.status }}): {{ o.theirs }}, {{ o.mine }}{% endif %}</span>{% endfor %}{% endmacro %}
+      <div class="subjects" id="subjects">
+        <div><span class="k">{{ t.subjects }}</span></div>
+        <ul class="plain">
+          {% if values.get('source_subject') %}
+          <li><span class="pill muted-pill">{{ t.subj_registered }}</span>
+            <span class="note">{{ values.get('source_subject') }}</span>{{ shared_line(registered_shared) }}</li>
+          {% endif %}
+          {% for line in subject_lines if line.live and not line.registered %}
+            <li>
+              <span class="note">{{ line.text or t.subj_not_recorded }}</span>{{ shared_line(line.shared or []) }}
+              <form method="post" class="inline-form" id="subject-line-{{ line.ids|join('-') }}" action="{{ url_for('enquiry_subject_strike', enquiry_id=enquiry_id) }}">
+                <input type="hidden" name="ids" value="{{ line.ids|join(',') }}"><input type="hidden" name="action" value="void"></form>
+              <button class="link tiny" type="submit" form="subject-line-{{ line.ids|join('-') }}">{{ t.thread_void }}</button>
+            </li>
+          {% endfor %}
+        </ul>
+        {% if clash %}
+          <p class="clash">{{ t.subj_number_clash_line if clash_kind == 'number' else t.subj_clash_line }} <a href="{{ url_for('enquiry', enquiry_id=clash.id) }}" class="mono">{{ clash.opp_no }}</a>
+            <span class="pill s-{{ (clash.status or '')|lower }}">{{ clash.status }}</span>
+            {% if clash_subject %}<span class="mono small">{{ clash_subject }}</span>{% endif %}
+            {% if clash_kind != 'number' and clash_subject %}
+            <button class="button small-button" type="submit" form="subject-add-anyway">{{ t.subj_add_anyway }}</button>{% endif %}</p>
+          {% if clash_kind != 'number' and clash_subject %}
+          <form method="post" id="subject-add-anyway" action="{{ url_for('enquiry_subjects', enquiry_id=enquiry_id) }}">
+            <input type="hidden" name="subject" value="{{ clash_subject }}"><input type="hidden" name="anyway" value="1"></form>
+          {% endif %}
+        {% endif %}
+        <form method="post" class="add-subject" id="subject-add" action="{{ url_for('enquiry_subjects', enquiry_id=enquiry_id) }}">
+          <input name="subject" form="subject-add" class="mono" placeholder="{{ t.subj_add_ph }}" aria-label="{{ t.subj_add_ph }}">
+          <button class="button small-button" type="submit">{{ t.subj_add }}</button>
+        </form>
+      </div>
+    </section>
+
+    {% include "_routes_card.html" %}
+    {% include "_case_cargo.html" %}
+
+    {# -------------------------------------------------- vendors ---- #}
+    <section class="card sec-card" id="vendors">
+      <h2>{{ t.sec_vendors }}</h2>
+      {% set voided_vendors = vendors|selectattr('voided')|list %}
+      {% if live_vendors %}
+      <table class="tbl vend vendors">
+        <thead><tr><th>Vendor</th>{% if live_routes|length > 1 %}<th>Routes</th>{% endif %}<th>Asked</th><th>Replied</th><th>{{ t.vendor_status }}</th><th>Their ref</th><th>{{ t.vendor_note }}</th><th></th></tr></thead>
+        {% for v in live_vendors %}
+        <tbody class="unit v-unit" data-unit="vendor-{{ v.id }}" data-unit-name="{{ v.vendor_key }}" data-form="vendor-{{ v.id }}">
+          <tr class="v-row {% if v.awarded %}awarded{% endif %}">
+            <td><a href="{{ url_for('party', party_id=v.vendor_party_id) }}"><b>{{ v.vendor_key }}</b></a>
+              {% if v.awarded %}<span class="pill ok">{{ t.mark_awarded }}</span>{% endif %}
+              {% if v.source and v.source != 'manual' %}<span class="pill muted-pill src">{{ 'team site' if v.source == 'web' else v.source }}</span>{% endif %}
+              {# Q2b: what it was asked for, and on a case with several routes, which ones: 'Inland · B' #}
+              {% set v_parts = (v.parts or '').split('|')|select|join(', ') %}
+              {% set v_letters = route_letters(v.route_ids) if live_routes|length > 1 else '' %}
+              {% if v_parts or v_letters %}<span class="muted small v-parts">{{ v_parts }}{% if v_parts and v_letters %} &middot; {% endif %}{{ v_letters }}</span>{% endif %}</td>
+            {% if live_routes|length > 1 %}<td><span class="chip">{{ route_letters(v.route_ids) }}</span></td>{% endif %}
+            <td class="mono nowrap">{{ v.asked_on|day }}</td>
+            <td class="mono nowrap">{{ v.replied_on|day }}</td>
+            <td>{{ v.machine_status or '' }}</td>
+            <td class="mono nowrap">{{ v.their_ref or '' }}</td>
+            <td class="muted note-cell" title="{{ v.notes or '' }}">{{ v.notes or '' }}</td>
+            <td class="row-links"><button type="button" class="link u-edit-btn" data-edit>{{ t.vendor_edit }}</button>
+              {# Q2d: Read quote - shown when it is on, the key is there and the month is under the cap #}
+              {% set rq_gate = (read_quote.gates if read_quote is defined else {}).get(v.id) %}
+              {% if rq_gate and rq_gate.show %}{% if rq_gate.enabled %}<a class="link rq-open" href="{{ url_for('enquiry', enquiry_id=enquiry_id, read=v.id) }}#read-quote">Read quote</a>{% else %}<button type="button" class="link rq-open" disabled title="{{ rq_gate.why }}">Read quote</button>{% endif %}{% endif %}
+              <form method="post" class="inline-form" action="{{ url_for('enquiry_vendors', enquiry_id=enquiry_id) }}"><input type="hidden" name="vendor_request_id" value="{{ v.id }}">{% if v.awarded %}<button class="link" name="action" value="unaward" type="submit">{{ t.vendor_unaward }}</button>{% else %}<button class="link" name="action" value="award" type="submit">{{ t.vendor_award }}</button>{% endif %}</form>
+</td>
+          </tr>
+          {# Q2a: the vendor's newest rates typed on the team site; the lines on a click.
+             Q2b: per route - each route this request covers, its letter on a case with several #}
+          {% for vr in ((vendor_rates or {}).get(v.id) or []) if vendor_rates is defined %}
+          <tr class="v-rates"><td colspan="8">
+            {% if vr.id %}
+            <details class="rates">
+              <summary>{% if vr.letter %}<span class="chip">{{ vr.letter }}</span>{% endif %}{# Q2e: an option's name first; one set reads as before #}{% if vr.label %}<span class="rates-label">{{ vr.label }}</span>{% endif %}<span class="rates-total">{{ vr.total or 'No total' }}</span>
+                {% if vr.lowest %}<span class="pill ok">Lowest</span>{% endif %}
+                {% if vr.valid %}<span class="rates-valid{% if vr.past %} warn{% endif %}">valid until {{ vr.valid|day }}</span>{% endif %}
+                {% for n in vr.not_said %}<span class="pill tone-amber">{{ n }}</span>{% endfor %}
+                {% if vr.transit %}<span class="muted small">transit {{ vr.transit }}</span>{% endif %}
+                {% if vr.carrier %}<span class="muted small">{{ vr.carrier }}</span>{% endif %}
+                {% if vr.free %}<span class="muted small">free time {{ vr.free }}</span>{% endif %}
+                <span class="muted small">rates &middot; {{ vr.lines|length }} line{{ '' if vr.lines|length == 1 else 's' }}</span></summary>
+              <table class="tbl rate-lines">
+                <thead><tr><th>Part</th><th>Charge</th><th>Unit</th><th class="num">Rate</th><th class="num">Min</th><th class="num">Qty</th><th class="num">Amount</th></tr></thead>
+                <tbody>{% for l in vr.lines %}<tr><td>{{ l.seg }}</td><td>{{ l.charge }}</td><td>{{ l.unit }}</td><td class="num">{{ l.rate }}</td><td class="num">{{ l.min }}</td><td class="num">{{ l.qty }}</td><td class="num">{{ l.amount }}</td></tr>{% endfor %}</tbody>
+              </table>
+              <p class="muted small">{% if vr.how == 'read' %}Read from the mail, checked and saved on the team site by{% else %}Typed on the team site by{% endif %} {{ vr.by }} &middot; {{ vr.at }}{% if vr.received %} &middot; sent {{ vr.received|day }}{% endif %}{% if vr.older %} &middot; {{ vr.older }} older version{{ '' if vr.older == 1 else 's' }}{% endif %}{% if vr.note %} &middot; {{ vr.note }}{% endif %}</p>
+              {# Q2c: a version typed by mistake: struck out, never deleted #}
+              <form method="post" class="inline-form rates-strike" action="{{ url_for('enquiry_rates_strike', enquiry_id=enquiry_id, rate_id=vr.id) }}"
+                    onsubmit='return confirm({{ "Strike out these rates? They also leave the Rate Card and the team site; the version before them, if there is one, is used again."|tojson }});'>
+                <button class="link warn" name="action" value="void" type="submit">Strike out</button></form>
+            </details>
+            {% endif %}
+            {% if vr.struck %}
+            <details class="rates-struck"><summary class="muted small">{{ vr.letter ~ ' ' if vr.letter and not vr.id else '' }}{{ vr.label ~ ' ' if vr.label and not vr.id else '' }}{{ vr.struck|length }} struck out</summary>
+              {% for s in vr.struck %}<div class="muted small">{{ s.total or 'No total' }} &middot; {{ s.by }} &middot; {{ s.at }}
+                <form method="post" class="inline-form" action="{{ url_for('enquiry_rates_strike', enquiry_id=enquiry_id, rate_id=s.id) }}">
+                  <button class="link tiny" name="action" value="unvoid" type="submit">Put back</button></form></div>{% endfor %}
+            </details>
+            {% endif %}
+          </td></tr>
+          {% endfor %}
+          {% if read_quote is defined and read_quote.panel and read_quote.panel.request_id == v.id %}
+          <tr class="v-read"><td colspan="8">{% include "_read_quote.html" %}</td></tr>
+          {% endif %}
+          <tr class="v-edit u-edit" id="vendor-edit-{{ v.id }}" hidden><td colspan="8">
+            <form method="post" class="u-form v-form" id="vendor-{{ v.id }}" novalidate action="{{ url_for('enquiry_vendors', enquiry_id=enquiry_id) }}">
+              <input type="hidden" name="vendor_request_id" value="{{ v.id }}">
+              <label class="f"><span>Asked</span><input type="date" name="asked_on" value="{{ v.asked_on or '' }}" form="vendor-{{ v.id }}" aria-label="Asked"></label>
+              <label class="f"><span>Replied</span><input type="date" name="replied_on" value="{{ v.replied_on or '' }}" form="vendor-{{ v.id }}" aria-label="Replied"></label>
+              <label class="f"><span>{{ t.vendor_status }}</span>
+                <select name="machine_status" form="vendor-{{ v.id }}" aria-label="{{ t.vendor_status }}">
+                  <option value="">-</option>
+                  {% for s in vendor_statuses %}<option value="{{ s }}" {% if v.machine_status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+                  {% if v.machine_status and v.machine_status not in vendor_statuses %}<option value="{{ v.machine_status }}" selected>{{ v.machine_status }}</option>{% endif %}
+                </select></label>
+              {# no 'quoted' box: the status Quoted is the one word for it (2026-09-25) #}
+              <label class="f"><span>Their ref</span><input name="their_ref" value="{{ v.their_ref or '' }}" form="vendor-{{ v.id }}" class="short mono" aria-label="Their ref"></label>
+              <label class="f wide"><span>{{ t.vendor_note }}</span><input name="notes" value="{{ v.notes or '' }}" form="vendor-{{ v.id }}" aria-label="{{ t.vendor_note }}"></label>
+              {# Q2b: what the vendor was asked to quote #}
+              {% set chosen_parts = (v.parts or '').split('|') %}
+              <label class="f wide"><span>Parts</span><span class="part-ticks"><input type="hidden" name="parts_present" value="1" form="vendor-{{ v.id }}">
+                {%- for part in vendor_parts %}<label class="tick"><input type="checkbox" name="part" value="{{ part }}" form="vendor-{{ v.id }}"{% if part in chosen_parts %} checked{% endif %}> {{ part }}</label>{% endfor %}</span></label>
+              {% if live_routes|length > 1 %}<label class="f wide"><span>Routes</span>{{ route_ticks_for('', v.route_ids) }}</label>{% endif %}
+              <div class="v-actions foot">
+                <button class="button primary" name="action" value="save" type="submit">{{ t.save }}</button>
+                <button type="button" class="button" data-cancel>{{ t.cancel }}</button>
+                {% if v.awarded %}<button class="button" name="action" value="unaward" type="submit">{{ t.remove_award }}</button>{% else %}<button class="button" name="action" value="award" type="submit">{{ t.mark_awarded }}</button>{% endif %}
+                <button class="link" name="action" value="void" type="submit">{{ t.void }}</button>
+              </div>
+            </form>
+          </td></tr>
+        </tbody>
+        {% endfor %}
+      </table>
+      {% else %}<p class="muted">No vendor asked yet.</p>{% endif %}
+      {% if voided_vendors %}
+        <details class="voided-vendors"><summary>{{ t.voided_rows.format(n=voided_vendors|length) }}</summary>
+          <table class="tbl vend"><tbody>
+          {% for v in voided_vendors %}
+            <tr class="voided"><td><a href="{{ url_for('party', party_id=v.vendor_party_id) }}">{{ v.vendor_key }}</a> <span class="pill muted-pill">{{ t.voided }}</span></td>
+              <td class="mono">{{ v.asked_on or '' }}</td><td class="mono">{{ v.replied_on or '' }}</td><td>{{ v.machine_status or '' }}</td>
+              <td>{{ v.their_ref or '' }}</td><td class="muted">{{ v.notes or '' }}</td>
+              <td class="row-links"><form method="post" action="{{ url_for('enquiry_vendors', enquiry_id=enquiry_id) }}" class="inline-form">
+                <input type="hidden" name="vendor_request_id" value="{{ v.id }}">
+                <button class="link" name="action" value="unvoid" type="submit">{{ t.unvoid }}</button></form></td></tr>
+          {% endfor %}
+          </tbody></table>
+        </details>
+      {% endif %}
+      <div class="add-row">
+        <form method="post" class="inline-form" action="{{ url_for('enquiry_vendors_from_outlook', enquiry_id=enquiry_id) }}">
+          <button class="button" type="submit">{{ t.log_vendor_from_outlook }}</button>
+        </form>
+        <span class="gap"></span>
+        <form method="post" class="inline-form add-vendor" action="{{ url_for('enquiry_vendors', enquiry_id=enquiry_id) }}">
+          <select name="vendor_party_id"><option value="">Vendor...</option>
+            {% for p in parties if not p.prospect %}<option value="{{ p.id }}">{{ p.key }}</option>{% endfor %}</select>
+          <input name="new_vendor_key" placeholder="or a new one">
+          <input type="date" name="asked_on" title="Asked on">
+          <input type="date" name="replied_on" title="Replied on">
+          <select name="machine_status" aria-label="{{ t.vendor_status }}">
+            <option value="">{{ t.vendor_status }}...</option>
+            {% for s_ in vendor_statuses %}<option value="{{ s_ }}">{{ s_ }}</option>{% endfor %}
+          </select>
+          <input name="their_ref" placeholder="Their ref">
+          {% if live_routes|length > 1 %}{{ route_ticks_for('', none) }}{% endif %}
+          <button class="button" type="submit">{{ t.add_vendor }}</button>
+        </form>
+      </div>
+    </section>
+
+    {# ------------------------------------------------ quotes (Q3) ---- #}
+    {% if quotes %}
+    <section class="card sec-card" id="quotes">
+      <div class="card-head"><h2>Quotes</h2><span class="muted small">{{ quotes|length }}</span></div>
+      <table class="tbl quotes">
+        <thead><tr><th>Sent</th><th>Quote</th><th>By</th><th class="num">Total</th><th>Valid to</th><th>Rates from</th><th class="num">Cost</th><th class="num">Profit</th><th class="num">Margin</th></tr></thead>
+        {% for q in quotes %}
+        <tbody class="q-unit{% if q.struck %} struck{% endif %}" id="{{ q.anchor }}">
+          <tr class="q-row">
+            <td class="mono nowrap">{{ q.sent|day }}</td>
+            <td><b>Quote {{ q.n }}</b>{% if q.requote %} <span class="muted">re-quote</span>{% endif %}{% if q.struck %} <span class="pill muted-pill">struck out with its event</span>{% endif %}</td>
+            <td>{{ q.by }}</td>
+            <td class="num wrap"><b>{{ q.total }}</b></td>
+            <td class="mono nowrap">{{ q.valid|day }}</td>
+            <td class="wrap">{{ q.rates_from }}</td>
+            <td class="num">{{ q.cost }}</td>
+            <td class="num">{{ q.profit }}</td>
+            <td class="num">{{ q.margin }}</td>
+          </tr>
+          <tr class="q-more"><td colspan="9">
+            <details class="q-detail"{% if q.open %} open{% endif %}>
+              <summary class="muted">{{ q.detail }}</summary>
+              <table class="tbl quote-lines">
+                <thead><tr><th>Charge</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Rate</th><th class="num">Amount</th>{% if q.with_costs %}<th class="num">Cost</th><th class="num">Markup</th>{% endif %}</tr></thead>
+                <tbody>{% for l in q.lines %}<tr><td>{{ l.charge }}{% if l.remark %} <span class="muted small">{{ l.remark }}</span>{% endif %}</td><td class="num">{{ l.qty }}</td><td class="num">{{ l.unit }}</td><td class="num">{{ l.rate }}</td><td class="num">{{ l.amount }}</td>{% if q.with_costs %}<td class="num">{{ l.cost }}</td><td class="num">{{ l.markup }}</td>{% endif %}</tr>{% endfor %}
+                  <tr class="totals"><td><b>TOTAL</b></td><td></td><td></td><td></td><td class="num"><b>{{ q.sum_amount }}</b></td>{% if q.with_costs %}<td class="num"><b>{{ q.sum_cost }}</b></td><td></td>{% endif %}</tr></tbody>
+              </table>
+              {% if q.remarks %}<p class="small"><span class="muted">Remarks:</span> {{ q.remarks }}</p>{% endif %}
+              {% if q.terms %}<ul class="q-terms small">{% for term in q.terms %}<li>{{ term }}</li>{% endfor %}</ul>{% endif %}
+            </details>
+          </td></tr>
+        </tbody>
+        {% endfor %}
+      </table>
+      <p class="muted small q-foot">Made with the team site's quote card. A quote sent another way (from Outlook, or Just log it) is on the timeline only.</p>
+    </section>
+    {% endif %}
+
+    {# ------------------------------------------------- rate used ---- #}
+    {% if st == 'Won' %}
+    <section class="card sec-card" id="won">
+      <div class="unit" data-unit="rate-used" data-unit-name="{{ t.who_won }}">
+        <div class="card-head"><h2>{{ t.who_won }}</h2><span class="us">&#9679; {{ t.edited_not_saved }}</span>
+          <button type="button" class="button small-button u-edit-btn" data-edit>{{ t.edit }}</button></div>
+        <p class="u-read">
+          <strong>{{ rate_used_labels.get(values.get('rate_used'), 'not answered yet') }}</strong>
+          {% if values.get('awarded_vendor_id') %}
+            &middot; <a href="{{ url_for('party', party_id=values.get('awarded_vendor_id')) }}">{{ awarded_party_key }}</a>
+          {% endif %}
+          {% if values.get('awarded_note') %}<span class="muted">&middot; {{ values.get('awarded_note') }}</span>{% endif %}
+        </p>
+        <form method="post" action="{{ url_for('enquiry_rate_used', enquiry_id=enquiry_id) }}"
+              class="u-form u-edit" id="rate-used-form" novalidate hidden>
+          {{ rate_used_fields('edit-', values.get('rate_used'), values.get('awarded_vendor_id'), values.get('awarded_note')) }}
+          <div class="foot"><button class="button primary" type="submit">{{ t.rate_used_save }}</button>
+            <button type="button" class="button" data-cancel>{{ t.cancel }}</button></div>
+        </form>
+      </div>
+    </section>
+    {% endif %}
+
+    {# The rescue button when Update from Outlook refused the selected mail
+       (?attach=1). The attached threads themselves are listed
+       in the Request card's Subjects block since v28. #}
+    {% if attach_offer %}
+    <section class="card sec-card threads" id="threads">
+      <h2>{{ t.section_threads }}</h2>
+      <form method="post" class="row-form attach-form" id="attach-thread-form"
+            action="{{ url_for('enquiry_attach_thread', enquiry_id=enquiry_id) }}">
+        <button class="button primary" type="submit">{{ t.attach_thread.format(opp=values.get('opp_no')) }}</button>
+        {% if attach_subject %}<span class="mono small">{{ attach_subject }}</span>{% endif %}
+        <span class="muted small">{{ t.attach_hint }}</span>
+      </form>
+    </section>
+    {% endif %}
+
+    {# ------------------------------------------------------- mail ---- #}
+    {# the Mail card is shared with the shipment page since 5b: _mail_card.html #}
+    {% set mail_back = url_for('enquiry', enquiry_id=enquiry_id, mail='all') %}
+    {% include "_mail_card.html" %}
+  </div>
+</div>
+
+{# -------------------------------------------------------- bottom bar ---- #}
+<div class="bottombar"><div class="inner">
+  <span class="saved" id="bb-saved" data-unsaved="{{ t.not_saved_units }}" data-saved="{{ t.last_saved }} {{ values.get('updated_at') or values.get('created_at') or '-' }} &middot; schema v{{ schema_version }}">{{ t.last_saved }} {{ values.get('updated_at') or values.get('created_at') or '-' }} &middot; schema v{{ schema_version }}</span>
+  <details class="more-menu">
+    <summary class="button">{{ t.more_menu }} &#9662;</summary>
+    <div class="menu">
+      <div class="muted small reg-line">{{ t.registered_cap }} {{ values.get('created_at')|day }} &middot; {{ values.get('created_by') or 'manual' }}</div>
+      <form method="post" class="row-form" action="{{ url_for('enquiry_scope', enquiry_id=enquiry_id) }}">
+        <input type="hidden" name="scope" value="{{ 'In' if values.get('scope') == 'Out' else 'Out' }}">
+        <button class="button" type="submit" title="{{ t.scope_hint }}">{{ t.switch_scope_to.format(s='In' if values.get('scope') == 'Out' else 'Out') }}</button>
+      </form>
+      {# SC1: LATAM set by hand - automatic (the countries and the requester), yes or no #}
+      {% set chosen = values.get('latam_choice') or '' %}
+      <form method="post" class="row-form latam-choice" id="latam-choice" action="{{ url_for('enquiry_latam', enquiry_id=enquiry_id) }}">
+        <span class="k" title="{{ t.latam_hint }}">{{ t.latam_label }}</span>
+        {% for value, label in [('', t.latam_auto), ('Y', t.latam_yes), ('N', t.latam_no)] %}
+        <button class="link{{ ' on' if chosen == value else '' }}" type="submit" name="latam" value="{{ value or 'auto' }}"
+                {% if chosen == value %}aria-pressed="true"{% endif %}>{{ label }}</button>{% if not loop.last %} / {% endif %}
+        {% endfor %}
+      </form>
+      {# v33: a struck-out route is put back here #}
+      {% for r in voided_routes %}
+        <form method="post" class="inline-form" action="{{ url_for('enquiry_routes', enquiry_id=enquiry_id) }}">
+          <input type="hidden" name="route_id" value="{{ r.id }}"><input type="hidden" name="action" value="unvoid">
+          <button class="menu-item link put-back-route" type="submit">{{ t.put_back_route.format(r.letter, r.to) }}</button></form>
+      {% endfor %}
+      {# a struck-out subject is not listed in the block; it is put back here #}
+      {% for line in subject_lines if not line.live and not line.registered %}
+        <form method="post" class="inline-form" action="{{ url_for('enquiry_subject_strike', enquiry_id=enquiry_id) }}">
+          <input type="hidden" name="ids" value="{{ line.ids|join(',') }}"><input type="hidden" name="action" value="unvoid">
+          <button class="menu-item link put-back-subject" type="submit">{{ t.subj_put_back_item.format(line.text or t.subj_not_recorded) }}</button></form>
+      {% endfor %}
+      {# an old request group's other OPPs, kept as history (v33: no new ones) #}
+      {% for gline in (group or []) %}
+        <a class="menu-item lane-item" href="{{ url_for('enquiry', enquiry_id=gline.id) }}">{{ gline.opp_no }} &middot; {{ gline|lane }} &middot; {{ gline.service_mode or '-' }} &middot; {{ gline.status }}</a>
+      {% endfor %}
+      {# NOT A REAL CASE: Dropped lives here #}
+      <form method="post" class="row-form not-a-case" action="{{ url_for('enquiry_duplicate', enquiry_id=enquiry_id) }}">
+        <span class="muted small">{{ t.not_a_case_note }}</span>
+        <span class="break"></span>
+        <input type="date" name="at" value="{{ today }}" aria-label="Date">
+        <input name="of_opp_no" placeholder="OPP-1361" aria-label="Kept case" pattern="[Oo][Pp][Pp]-[0-9]{4}">
+        <input name="note" placeholder="{{ t.note }}">
+        <span class="break"></span>
+        <button class="button" name="action" value="duplicate">{{ t.mark_duplicate }}&hellip;</button>
+        <button class="button" name="action" value="error">{{ t.mark_in_error }}</button>
+      </form>
+      {% if not values.get('status_confirmed') %}
+        <form method="post" class="row-form" action="{{ url_for('enquiry_confirm', enquiry_id=enquiry_id) }}">
+          <button class="button" type="submit" title="{{ t.confirm_hint }}">{{ t.confirm }} status</button>
+        </form>
+      {% endif %}
+    </div>
+  </details>
+  <a class="button" href="{{ url_for('enquiries') }}">{{ t.back_to_list }}</a>
+</div></div>
+{% endblock %}

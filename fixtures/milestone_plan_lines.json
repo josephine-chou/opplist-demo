@@ -1,0 +1,105 @@
+{
+ "note": "Invented evidence lines for the Start shipment reading (5e): each one a planned or a done milestone, or the cut-off issue, with the reading expected. dest = the case's destination names. The last three belong to one sample case: done readings that must stay.",
+ "lines": [
+  {
+   "case": "OPP-1512",
+   "mode": "air",
+   "dest": ["GRU", "Brazil"],
+   "sent_at": "2026-08-18 10:20",
+   "subject": "RE: AIR QUOTE // ATL - GRU // VALVE BODIES",
+   "sender": "JJC-VICTOR LANG",
+   "line": "Our trucker is scheduled to have the pallets picked up this afternoon.",
+   "expect": {"kind": "milestone", "name": "Picked up", "planned": true}
+  },
+  {
+   "case": "OPP-1518",
+   "mode": "air",
+   "dest": ["BOGOTA", "Colombia"],
+   "sent_at": "2026-08-21 15:05",
+   "subject": "RE: URGENT // DFW - BOG // LAB REAGENTS",
+   "sender": "JJC-VICTOR LANG",
+   "line": "Understood, we will get the crates picked up before noon.",
+   "expect": {"kind": "milestone", "name": "Picked up", "planned": true}
+  },
+  {
+   "case": "OPP-1523",
+   "mode": "air",
+   "dest": ["NRT", "Japan"],
+   "sent_at": "2026-09-02 09:30",
+   "subject": "RE: IAH - NRT // SPARE PARTS // DAP",
+   "sender": "JJC-VICTOR LANG",
+   "line": "Funds have cleared on our side and the freight has departed on the evening flight.",
+   "expect": {"kind": "milestone", "name": "Departed", "planned": false}
+  },
+  {
+   "case": "OPP-1527",
+   "mode": "air",
+   "dest": ["NAN", "Fiji"],
+   "sent_at": "2026-09-04 03:15",
+   "subject": "Re: EXW Ohio - NAN // generator parts // account setup",
+   "sender": "Liam Foster",
+   "line": "Could you get the boxes picked up this week? We can wire the payment today.",
+   "expect": {"kind": "milestone", "name": "Picked up", "planned": true}
+  },
+  {
+   "case": "OPP-1531",
+   "mode": "ocean",
+   "dest": ["CALLAO", "Peru"],
+   "sent_at": "2026-09-07 12:40",
+   "subject": "RE: FCL 2x40HC // HOUSTON - CALLAO",
+   "sender": "JJC-VICTOR LANG",
+   "line": "You will get the booking confirmation once the line gives us a vessel.",
+   "expect": {"kind": "milestone", "name": "Booked", "planned": true}
+  },
+  {
+   "case": "OPP-1536",
+   "mode": "air",
+   "dest": ["LIM", "Peru"],
+   "sent_at": "2026-09-14 17:25",
+   "subject": "RE: EXW Reno, NV - LIM // air rates",
+   "sender": "JJC-VICTOR LANG",
+   "line": "The pallets arrived at MIA after the cut-off for the transfer, so they go across tomorrow.",
+   "expect": {"kind": "issue", "name": "Missed cut-off", "planned": false}
+  },
+  {
+   "case": "OPP-1540",
+   "mode": "air",
+   "dest": ["USA"],
+   "sent_at": "2026-09-22 10:50",
+   "subject": "Import by air Poland to OH // resin drums",
+   "sender": "JJC-PAUL WEBB",
+   "line": "What the shipper cares about is having the drums picked up by next Friday; I have asked two truckers for rates.",
+   "expect": {"kind": "milestone", "name": "Picked up", "planned": true}
+  },
+  {
+   "case": "OPP-1545",
+   "mode": "air",
+   "dest": ["EZE", "Argentina"],
+   "sent_at": "2026-09-08 10:30",
+   "subject": "RE: CONFIRMED // MIA - EZE // MEDICAL MONITORS",
+   "sender": "JJC-VICTOR LANG",
+   "line": "Please be informed the crates have just been picked up.",
+   "expect": {"kind": "milestone", "name": "Picked up", "planned": false}
+  },
+  {
+   "case": "OPP-1545",
+   "mode": "air",
+   "dest": ["EZE", "Argentina"],
+   "sent_at": "2026-09-09 13:10",
+   "subject": "RE: CONFIRMED // MIA - EZE // MEDICAL MONITORS",
+   "sender": "JJC-VICTOR LANG",
+   "line": "We have booked a pallet position on the Friday flight, ETD MIA 10/02/2026.",
+   "expect": {"kind": "milestone", "name": "Booked", "planned": false}
+  },
+  {
+   "case": "OPP-1545",
+   "mode": "air",
+   "dest": ["EZE", "Argentina"],
+   "sent_at": "2026-09-09 16:40",
+   "subject": "RE: CONFIRMED // MIA - EZE // MEDICAL MONITORS",
+   "sender": "JJC-VICTOR LANG",
+   "line": "The crates were picked up this morning and they will reach the consignee on Tuesday.",
+   "expect": {"kind": "milestone", "name": "Picked up", "planned": false}
+  }
+ ]
+}

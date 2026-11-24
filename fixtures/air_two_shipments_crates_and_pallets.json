@@ -1,0 +1,19 @@
+{
+ "note": "Invented sample: two air shipments to Manila in one forwarded mail, 'Shipment 1' (3 crates in inches + 1 package on a second HAWB, FCA Dayton OH) and 'Shipment 2' (9 pallets in cm, EXW Nashua NH). Two cargo lines instead of one merged list; shipment 1's stated total leaves out the package (the items are kept), shipment 2's items do not add up to its stated total (the total is kept).",
+ "subject": "FW: two air shipments USA to Manila airport Philippines - pls check",
+ "sender_name": "JJC-DEREK CHAN",
+ "sender_address": "DerekChan@jojofreight.example",
+ "sender_internal": true,
+ "received_on": "2026-09-16",
+ "received_at": "2026-09-16 10:22:05",
+ "to_addresses": [
+  "JJC-MFN@jojofreight.example"
+ ],
+ "cc_addresses": [],
+ "display_to": "#JJC-MFN",
+ "conversation_id": "CONV-DEMO-USA-MNL",
+ "entry_id": "ENTRY-DEMO-USA-MNL-0916",
+ "message_id": "<usa-mnl-two-0916@jojofreight.example>",
+ "attachment_names": [],
+ "body": "Derek Chan\r\nJoJo Freight\r\n\r\nFrom: Paolo Reyes <paolo@bayside-forwarding.example>\r\nSent: Tuesday, September 15, 2026 10:05 PM\r\nTo: JJC-DEREK CHAN <DerekChan@jojofreight.example>\r\nSubject: two air shipments USA to Manila airport Philippines - pls check\r\n\r\nHi Derek\r\n\r\nOur consignee has two lots coming by air to Manila, details for each below.\r\n\r\n1/ Shipment 1 :\r\n\r\nTerm : FCA  in USA\r\n\r\nPickup at Dayton, OH 45402 USA\r\n\r\nGoods: assorted general cargo\r\nOne master bill with two house bills, please:\r\n1. HAWB 1:\r\n\r\nCRATE 1  : DIM :  60 x 45 x 80” INCH, GW :  820 KG\r\nCRATE 2 : DIM : 60 x 45 x 80” INCH , GW:  390 KG\r\nCRATE 3 :  DIM : 60 x 45 x 96” INCH , GW: 505 KG\r\nTOTAL:  03 CRATE / Total GW : 1,715 KG\r\n\r\n2. HAWB 2: 01 package / GW :  52 Kgs / DIM :  24 x 20 x 16” INCH\r\n\r\nDestination : Manila airport (MNL), Philippines\r\n\r\n2/ Shipment 2 :\r\n\r\nTerm : EXW in USA\r\n\r\nPickup at 63 Tamarack Lane Nashua, NH 03060, USA\r\n\r\nGoods: spare machine parts\r\nPallet list :\r\npallet 1 : 115x95x120 cm/ 241.5kgs\r\npallet 2: 115x95x110cm/228.0kgs\r\npallet 3: 115x95x120cm/236.4kgs\r\npallet 4: 115x95x120 cm/ 241.5kgs\r\npallet 5: 115x95x105 cm/ 219.8kgs\r\npallet 6: 115x95x120 cm/ 244.0kgs\r\npallet 7 : 115x95x120 cm/ 233.7kgs\r\npallet 8: 115x95x100 cm/ 198kgs\r\npallet 9: 115x95x120 cm/ 239.1kgs\r\n\r\nTotal : 9 pallets/ 2480 kgs\r\nDestination : Manila airport (MNL), Philippines\r\n\r\nWaiting for your best offer, thank you.\r\n\r\nPaolo Reyes\r\nBayside Forwarding (demo)\r\n"
+}

@@ -1,0 +1,192 @@
+{# The Cargo card (export-preview\OppList_CargoCheck_SAMPLE.html),
+   on the case page and (v34) on the register form alike: one row per line -
+   pieces; size per piece as written with its cm under it; weight in kg with
+   the written value and any 'each' multiplication under it; volume in cbm
+   with 'pieces x each' or 'as stated' under it; FCL containers per shipment,
+   how often and how long when a line has them; the routes it applies to.
+   'edit' opens the row's fields and the numbers follow what is typed. An
+   uncounted line is struck through. Under the totals, the checks
+   (cargo_checks): green passed or answered, amber to decide.
+
+   Case page (15a): each line is a unit - its two rows in a tbody of their
+   own, the edit row holding the line's form, with Save and Cancel; a
+   check's answer posts form "cargo-answer".
+   Register form (reg): the rows are inputs of the main form named
+   cargo_<i>_<field>, saved with the case; an answer changes those inputs
+   in the page (app.js) and is saved with the case. #}
+{% set reg = reg if reg is defined else false %}
+{% set cv = cargo_view %}
+{% set lr = live_routes if live_routes is defined else [] %}
+{% set many = lr|length > 1 %}
+{% set mode = values.get('service_mode') or '' %}
+{% set checks = cargo_checks if cargo_checks is defined else [] %}
+{% macro unit_select(name, fa, current, units, blank=false) %}<select name="{{ name }}"{{ fa|safe }} data-f="{{ name.split('_', 2)[-1] if name.startswith('cargo_') else name }}">{% if blank %}<option value="" {% if not current %}selected{% endif %}>?</option>{% endif %}{% for u in units %}<option {% if (current or (units[0] if not blank else '')) == u %}selected{% endif %}>{{ u }}</option>{% endfor %}</select>{% endmacro %}
+{% macro route_ticks(p, fa, chosen) %}{% if many %}<span class="route-ticks"><input type="hidden" name="{{ p }}routes_present" value="1"{{ fa|safe }}><input type="hidden" name="{{ p }}routes_total" value="{{ lr|length }}"{{ fa|safe }}>{% for r in lr %}<label class="tick"><input type="checkbox" name="{{ p }}route" value="{{ r.id }}"{{ fa|safe }} {% if not chosen or r.id in chosen %}checked{% endif %}> {{ r.letter }}</label>{% endfor %}</span>{% endif %}{% endmacro %}
+{% macro num(v) %}{{ v if v is not none else '' }}{% endmacro %}
+{% macro line_edit(p, fa, l) %}
+  <div class="c-form" data-line-form>
+    <label class="f"><span>{{ t.cargo_col_pieces }}</span><input name="{{ p }}pieces"{{ fa|safe }} data-f="pieces" data-num value="{{ num(l.get('pieces')) }}" placeholder="25 big bags"></label>
+    <label class="f"><span>Packing</span><input name="{{ p }}pack_word"{{ fa|safe }} data-f="pack_word" value="{{ l.get('pack_word') or '' }}" placeholder="pallets"></label>
+    <label class="f wide"><span>Size per piece</span><span class="grp">
+      <input name="{{ p }}dim_l"{{ fa|safe }} data-f="dim_l" data-num value="{{ num(l.get('dim_l')) }}" class="n" title="or type all three: 52 x 42 x 47 in"> x
+      <input name="{{ p }}dim_w"{{ fa|safe }} data-f="dim_w" data-num value="{{ num(l.get('dim_w')) }}" class="n"> x
+      <input name="{{ p }}dim_h"{{ fa|safe }} data-f="dim_h" data-num value="{{ num(l.get('dim_h')) }}" class="n">
+      {{ unit_select(p ~ 'dims_unit', fa, l.get('dims_unit'), ['cm', 'in', 'mm', 'm'], blank=(l.get('dim_l') is not none and not l.get('dims_unit'))) }}</span></label>
+    <label class="f wide"><span>{{ t.cargo_col_weight }}</span><span class="grp">
+      <input name="{{ p }}weight_value"{{ fa|safe }} data-f="weight_value" data-num value="{{ num(l.get('weight_value')) }}" class="n" title="25 t, 25,000 kg, 7605 lbs">
+      {{ unit_select(p ~ 'weight_unit', fa, l.get('weight_unit'), ['kg', 'lbs', 't']) }}
+      <select name="{{ p }}weight_basis"{{ fa|safe }} data-f="weight_basis"><option value="total" {% if l.get('weight_basis') != 'each' %}selected{% endif %}>in total</option><option value="each" {% if l.get('weight_basis') == 'each' %}selected{% endif %}>each</option></select></span></label>
+    <label class="f wide"><span>Volume stated</span><span class="grp">
+      <input name="{{ p }}cbm_value"{{ fa|safe }} data-f="cbm_value" data-num value="{{ num(l.get('cbm_value') if l.get('cbm_value') is not none else (l.get('cbm') if l.get('cbm_from') == 'stated' else none)) }}" placeholder="cbm" class="n">
+      <select name="{{ p }}cbm_basis"{{ fa|safe }} data-f="cbm_basis"><option value="total" {% if l.get('cbm_basis') != 'each' %}selected{% endif %}>in total</option><option value="each" {% if l.get('cbm_basis') == 'each' %}selected{% endif %}>each</option></select></span></label>
+    <label class="f wide"><span>{{ t.cargo_col_commodity }}</span><input name="{{ p }}commodity"{{ fa|safe }} value="{{ l.get('commodity') or '' }}"></label>
+    <label class="f"><span>HS code</span><input name="{{ p }}hs_code"{{ fa|safe }} data-f="hs_code" value="{{ l.get('hs_code') or '' }}" placeholder="2507.00.10"></label>
+    <label class="f"><span>Cargo value</span><input name="{{ p }}cargo_value"{{ fa|safe }} data-f="cargo_value" value="{{ l.get('cargo_value')|cargo_value(l.get('cargo_value_cur')) }}" placeholder="USD 12,500"></label>
+    <label class="f"><span>Containers / shipment</span><span class="grp"><input name="{{ p }}container_qty"{{ fa|safe }} data-num value="{{ l.get('container_qty') or '' }}" class="n">
+      <select name="{{ p }}container_type"{{ fa|safe }}><option value="">-</option>{% for c in container_types %}<option {% if l.get('container_type') == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select></span></label>
+    <label class="f"><span>How often</span><span class="grp"><input name="{{ p }}per_month"{{ fa|safe }} data-num value="{{ num(l.get('per_month')) }}" class="n" placeholder="2"> <span class="unit">a month</span></span></label>
+    <label class="f"><span>For how long</span><span class="grp"><input name="{{ p }}months"{{ fa|safe }} data-num value="{{ num(l.get('months')) }}" class="n" placeholder="24"> <span class="unit">months</span></span></label>
+    <label class="f"><span>Counted</span><span><input type="hidden" name="{{ p }}counted_present" value="1"{{ fa|safe }}><input type="checkbox" name="{{ p }}counted" value="1"{{ fa|safe }} data-f="counted" {% if l.get('counted', 1) %}checked{% endif %}></span></label>
+    {% if many and not reg %}<label class="f wide"><span>Routes</span>{{ route_ticks(p, fa, l.get('route_list') or []) }}</label>{% endif %}
+    <label class="f wide"><span>{{ t.note }}</span><input name="{{ p }}notes"{{ fa|safe }} value="{{ l.get('notes') or '' }}"></label>
+    {{ caller() }}
+  </div>
+{% endmacro %}
+{% macro carried(p, l) %}{# the register form: what was read rides along, unseen #}
+  {% for k in ['label', 'source', 'source_mail', 'source_text', 'weight_written', 'weight_reading', 'cbm_written', 'decided', 'dims_text', 'stated_ref'] %}
+    <input type="hidden" name="{{ p }}{{ k }}" data-f="{{ k }}" value="{{ num(l.get(k)) if k == 'stated_ref' else (l.get(k) or ('manual' if k == 'source' else '')) }}">{% endfor %}
+  <input type="hidden" name="{{ p }}deliver_to" data-k="deliver_to" value="{{ l.get('deliver_to') or '' }}">
+{% endmacro %}
+<table class="tbl cargo cargo-case" id="cargo-lines" data-mode="{{ mode }}"{% if reg %} data-register{% endif %}>
+  <thead><tr><th></th><th>{{ t.cargo_col_pieces }}</th><th>Size per piece</th><th class="num">{{ t.cargo_col_weight }}</th><th class="num">{{ t.cargo_col_cbm }}</th>
+    {% if any_fcl_lines %}<th>Per shipment</th>{% endif %}
+    {% if any_project %}<th>How often</th><th>For how long</th>{% endif %}
+    {% if many %}<th>Routes</th>{% endif %}<th></th></tr></thead>
+  {% if reg %}<tbody>{% endif %}
+  {% for l in cv.lines %}
+    {% set w = l.written %}
+    {% set key = loop.index0 if reg else l.id %}
+    {% set p = ('cargo_' ~ loop.index0 ~ '_') if reg else '' %}
+    {% set fa = '' %}
+    {% if not reg %}<tbody class="unit c-unit" data-unit="cargo-line-{{ l.id }}" data-unit-name="Cargo line {{ loop.index }}" data-form="cargo-line-{{ l.id }}">{% endif %}
+    {% set asks_here = checks|selectattr('line_id', 'equalto', key)|selectattr('kind', 'equalto', 'ask')|list %}
+    <tr class="c-row{% if not l.counted %} off{% endif %}{% if asks_here %} asks{% endif %}" id="cargo-row-{{ key }}" data-line="{{ key }}"
+        data-kg="{{ l.weight_n if l.weight_n is not none else '' }}" data-cbm="{{ l.volume_cbm if l.volume_cbm is not none else '' }}"
+        data-pieces="{{ l.pieces_n or '' }}" data-counted="{{ 1 if l.counted else 0 }}"
+        data-routes="{{ (l.route_list|length) if (many and l.route_list) else lr|length or 1 }}">
+      <td class="idx">{{ loop.index }}{% if l.label %} <span class="w">{{ l.label }}</span>{% endif %}{% if l.source == 'mail' %} <span class="pill muted-pill src">mail</span>{% endif %}</td>
+      <td><span class="val">{{ l.pieces if l.pieces is not none else '' }} {{ l.pack_word or '' }}</span>{% if not l.counted %}<span class="w">not counted</span>{% endif %}
+        {% if l.commodity %}<span class="w">{{ l.commodity }}</span>{% endif %}</td>
+      <td><span class="val d-size">{{ w.size or '-' }}</span>{% if w.size_cm %}<span class="w d-size-cm{% if not l.dims_unit and l.dim_l is not none %} warn{% endif %}">{{ w.size_cm }}</span>{% endif %}</td>
+      <td class="num"><span class="val d-kg">{{ w.weight }}{% if w.weight %} kg{% endif %}</span>{% if w.weight_note %}<span class="w d-kg-note{% if asks_here|selectattr('code', 'in', ['reading', 'each'])|list %} warn{% endif %}">{{ w.weight_note }}</span>{% endif %}</td>
+      <td class="num"><span class="val d-cbm">{{ w.volume }}{% if w.volume %} cbm{% endif %}</span>{% if w.volume_note %}<span class="w d-cbm-note">{{ w.volume_note }}</span>{% endif %}</td>
+      {% if any_fcl_lines %}<td>{% if l.container_qty %}{{ l.container_qty }} x {{ l.container_type or '' }}{% endif %}</td>{% endif %}
+      {% if any_project %}<td>{% if l.per_month %}{{ l.per_month|round(2)|string|replace('.0', '') }} a month{% if many %}<span class="w">each route</span>{% endif %}{% endif %}</td>
+        <td>{% if l.months %}{{ l.months|round(1)|string|replace('.0', '') }} months{% endif %}</td>{% endif %}
+      {% if many %}<td><span class="chip">{{ l.routes_label }}</span></td>{% endif %}
+      <td class="row-links">{% if reg %}<button type="button" class="link" data-toggle="cargo-edit-{{ key }}">{{ t.edit }}</button>
+        <button type="button" class="link tiny" data-clear-row="{{ key }}">{{ t.cargo_remove }}</button>{% else %}<button type="button" class="link u-edit-btn" data-edit>{{ t.edit }}</button>{% endif %}</td>
+    </tr>
+    <tr class="c-edit u-edit" id="cargo-edit-{{ key }}" data-line="{{ key }}" hidden><td colspan="9">
+      {% if reg %}{{ carried(p, l) }}{% else %}<form method="post" class="u-form" id="cargo-line-{{ l.id }}" novalidate action="{{ url_for('enquiry_cargo', enquiry_id=enquiry_id) }}"><input type="hidden" name="line_id" value="{{ l.id }}">{% endif %}
+      {% call line_edit(p, fa, l) %}
+        {% if not reg %}
+        <div class="c-actions foot">
+          <button class="button primary" name="action" value="save" type="submit">{{ t.save }}</button>
+          <button type="button" class="button" data-cancel>{{ t.cancel }}</button>
+          <button class="link warn" name="action" value="void" type="submit">{{ t.cargo_remove }}</button>
+        </div>
+        {% endif %}
+      {% endcall %}
+      {% if not reg %}</form>{% endif %}
+    </td></tr>
+    {% if not reg %}</tbody>{% endif %}
+  {% endfor %}
+  {% if reg %}</tbody>{% endif %}
+</table>
+{% if cv.voided %}
+  <details class="voided-vendors"><summary>{{ t.cargo_voided.format(n=cv.voided|length) }}</summary>
+    <table class="tbl cargo"><tbody>
+    {% for l in cv.voided %}
+      <tr class="voided"><td class="mono">{{ l.label or l.seq }}</td><td>{{ l.pieces or '' }} {{ l.pack_word or '' }}</td><td>{{ l.written.size }}</td>
+        <td class="num">{{ l.written.weight }}</td><td class="num">{{ l.written.volume }}</td><td>{{ l.commodity or '' }}</td>
+        <td class="row-links"><form method="post" class="inline-form" action="{{ url_for('enquiry_cargo', enquiry_id=enquiry_id) }}">
+          <input type="hidden" name="line_id" value="{{ l.id }}">
+          <button class="link" name="action" value="unvoid" type="submit">{{ t.unvoid }}</button></form></td></tr>
+    {% endfor %}
+    </tbody></table>
+  </details>
+{% endif %}
+{% if reg %}
+<div class="cargo-tools"><button type="button" class="link" data-toggle="cargo-add">{{ t.cargo_add_line }}</button>
+  {% if cv.lines %}<span class="muted small">{{ t.cargo_register_note }}</span>{% endif %}</div>
+<div class="cargo-add" id="cargo-add" hidden>
+    {% set n = cv.lines|length %}
+    <input type="hidden" name="cargo_{{ n }}_source" value="manual">
+    {% call line_edit('cargo_' ~ n ~ '_', '', {}) %}{% endcall %}
+</div>
+{% else %}
+{# + Add line (15a): a unit like the others, its form inside it #}
+<div class="cargo-tools"><button type="button" class="link" data-open-unit="cargo-add">{{ t.cargo_add_line }}</button></div>
+<div class="unit cargo-add" data-unit="cargo-add" data-unit-name="New cargo line">
+  <form method="post" class="u-form u-edit" id="cargo-add-form" novalidate action="{{ url_for('enquiry_cargo', enquiry_id=enquiry_id) }}" hidden>
+    {% call line_edit('', '', {}) %}
+      <div class="c-actions foot"><button class="button primary" name="action" value="add" type="submit">{{ t.cargo_add }}</button>
+        <button type="button" class="button" data-cancel>{{ t.cancel }}</button></div>
+    {% endcall %}
+  </form>
+</div>
+{% endif %}
+{% if reg %}
+  {# the totals the mail states ride along with the case, and the case-level answers #}
+  {% for s in (reg_stated if reg_stated is defined else []) %}{% set j = loop.index0 %}
+    {% for k in ['source_mail', 'source_text', 'pieces', 'pack_word', 'weight_value', 'weight_unit', 'weight_written', 'weight_kg', 'cbm', 'cbm_written', 'chargeable_kg', 'chargeable_written'] %}
+    <input type="hidden" name="stated_{{ j }}_{{ k }}" value="{{ num(s.get(k)) }}">{% endfor %}
+  {% endfor %}
+  <input type="hidden" name="cargo_decided" id="cargo-decided" value="{{ values.get('cargo_decided') or '' }}">
+{% endif %}
+
+{# the totals: one number a cell, the formula under it #}
+{% set tt = totals %}
+{% set pieces_total = cv.lines|selectattr('counted')|map(attribute='pieces_n')|select|sum %}
+<div class="cargo-totals" id="cargo-totals">
+  <div><div class="k">{{ t.cargo_col_pieces }}</div><div class="v t-pieces">{{ pieces_total or '-' }}</div><div class="f">counted lines</div></div>
+  <div><div class="k">Gross weight</div><div class="v t-gross">{{ '{:,.1f}'.format(tt.gross_kg) ~ ' kg' if tt.gross_kg is not none else '-' }}</div>
+    <div class="f">{{ 'each line once per route it applies to' if many else ('sum of the lines' if tt.lines_counted else 'typed below') }}</div></div>
+  <div><div class="k">Volume</div><div class="v t-volume">{{ '{:,.3f}'.format(tt.volume_cbm) ~ ' cbm' if tt.volume_cbm is not none else '-' }}</div>
+    <div class="f">{{ 'sum of the lines' if tt.lines_counted else 'typed below' }}</div></div>
+  {% if mode in ('Air', 'Sea-Air') %}
+    {% set vk = tt.volume_cbm * 1000000 / 6000 if tt.volume_cbm is not none else none %}
+    <div><div class="k">Volumetric</div><div class="v t-vol-kg">{{ '{:,.1f}'.format(vk) ~ ' kg' if vk is not none else '-' }}</div>
+      <div class="f t-vol-f">{{ '{:,.3f}'.format(tt.volume_cbm) ~ ' x 166.67' if vk is not none else '' }}</div></div>
+    <div class="key"><div class="k">Chargeable</div><div class="v t-charge">{{ '{:,.1f}'.format(tt.air_weight_kg) ~ ' kg' if tt.air_weight_kg is not none else '-' }}</div>
+      <div class="f t-charge-why">{% if vk is not none and tt.gross_kg is not none %}{{ 'volumetric is higher' if vk > tt.gross_kg else 'gross is higher' }}{% endif %}</div></div>
+  {% elif mode == 'LCL' %}
+    {% set tons = (tt.gross_kg or 0) / 1000 %}
+    <div class="key"><div class="k">W/M</div><div class="v t-wm">{{ '{:,.3f}'.format([tt.volume_cbm or 0, tons]|max) }}</div>
+      <div class="f t-wm-f">max({{ '{:,.3f}'.format(tt.volume_cbm or 0) }} cbm, {{ '{:,.3f}'.format(tons) }} t)</div></div>
+  {% elif mode == 'FCL' and tt.container_qty %}
+    <div class="key"><div class="k">Per shipment</div><div class="v">{{ tt.container_qty }} x {{ tt.container_type or '' }}</div>
+      <div class="f">{{ 'all routes' if many else 'containers' }}</div></div>
+  {% endif %}
+  {% if tt.per_month %}
+    <div><div class="k">Project</div><div class="v">{{ volume_fact.value }}</div><div class="f">{{ volume_fact.sub }}</div></div>
+  {% endif %}
+</div>
+
+{# the checks (cargo_checks, v34): green passed or answered, amber to decide #}
+{% if checks %}
+<div class="checks" id="cargo-checks">
+  {% for c in checks %}
+    <div class="ck {{ c.kind }}" data-code="{{ c.code }}"{% if c.line_id is not none %} data-line="{{ c.line_id }}"{% endif %}>
+      <span class="ic">{% if c.kind == 'ok' %}&#10003;{% else %}!{% endif %}</span><span class="ck-text">{{ c.text }}</span>
+      {% if c.actions %}<span class="acts">{% for label, action, value in c.actions %}
+        {% if action == 'edit' and reg %}<button type="button" class="button small-button" data-toggle="cargo-edit-{{ c.line_id }}">{{ label }}</button>
+        {% elif action == 'edit' %}<button type="button" class="button small-button" data-open-unit="cargo-line-{{ c.line_id }}">{{ label }}</button>
+        {% elif reg %}<button type="button" class="button small-button" data-answer="{{ action }}" data-line="{{ c.line_id if c.line_id is not none else '' }}" data-value="{{ value }}">{{ label }}</button>
+        {% else %}<button class="button small-button" type="submit" form="cargo-answer" name="answer" value="{{ action }}|{{ c.line_id if c.line_id is not none else '' }}|{{ value }}">{{ label }}</button>{% endif %}
+      {% endfor %}</span>{% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endif %}

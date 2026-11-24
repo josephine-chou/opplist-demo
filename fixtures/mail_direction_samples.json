@@ -1,0 +1,289 @@
+[
+ {
+  "name": "see_below_revised_rates_for_the_cargo",
+  "why": "'rates for' in the pointer sentence was read as a request",
+  "expected": "quoting",
+  "read_before": "asking",
+  "subject": "RE: AIR QUOTE // ATLANTA - GUAYAQUIL",
+  "sent_at": "2026-08-12 10:20:00",
+  "sender_name": "JJC-VICTOR LANG",
+  "sender_address": "VictorLang@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "paula.serrano@tolvex.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "Paula Serrano; #JJC-DESK",
+  "body": "Hi Paula,\r\n\r\nPlease see below the revised rates for your cargo on this lane:\r\n\r\nOrigin: ATL / Destination: GYE\r\n\r\nAir freight (+300 kg): $2.64/kg all in, minimum $140\r\n\r\nX-ray screening: $0.11/kg, minimum $25\r\n\r\nTerminal handoff: $0.20/kg, minimum $70\r\n\r\nSpace is not held until the booking is confirmed.\r\n\r\nRegards,\r\nVictor Lang\r\nJoJo Freight (Chicago)\r\nTel: 312-555-0142\r\n\r\nFrom: Paula Serrano\r\nSent: Monday, August 10, 2026 4:02 PM\r\nTo: Victor Lang\r\nSubject: AIR QUOTE // ATLANTA - GUAYAQUIL\r\n\r\nVictor, please quote 3 cartons of spare parts, 340 kg, ATL to GYE.\r\n"
+ },
+ {
+  "name": "our_cost_for_one_box_under_a_pointer",
+  "why": "'cost for'",
+  "expected": "quoting",
+  "read_before": "asking",
+  "subject": "RE: FCL ENQUIRY // HOUSTON - GDANSK",
+  "sent_at": "2026-09-08 14:05:00",
+  "sender_name": "JJC-ERIC LO",
+  "sender_address": "EricLo@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "mirela.stan@tolvex.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "Mirela Stan; #JJC-DESK",
+  "body": "Hello Mirela,\r\n\r\nPlease find below our cost for a single 40HQ from Houston, port to port.\r\n\r\nPOL: Houston / POD: Gdansk\r\n\r\nOcean freight: $3,280 per container\r\n\r\nBunker adjustment: $210\r\n\r\nBill of lading issue: $65\r\n\r\nTrucking from the Katy warehouse to the terminal: $540 including fuel\r\n\r\nRegards,\r\nEric Lo\r\nJoJo Freight (Chicago), export desk\r\n\r\nFrom: Mirela Stan\r\nSent: Friday, September 4, 2026 9:11 AM\r\nTo: Eric Lo\r\nSubject: FCL ENQUIRY // HOUSTON - GDANSK\r\n\r\nEric, can you advise your lowest rate on a single 40HQ of resin?\r\n"
+ },
+ {
+  "name": "below_rates_for_the_two_orders",
+  "why": "'rates for'",
+  "expected": "quoting",
+  "read_before": "asking",
+  "subject": "RE: URGENT AIR RATE REQUEST // TWO ORDERS",
+  "sent_at": "2026-08-19 17:40:00",
+  "sender_name": "JJC-VICTOR LANG",
+  "sender_address": "VictorLang@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "joaquin.mesa@tolvex.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "Joaquin Mesa; #JJC-DESK",
+  "body": "Hi Joaquin,\r\n\r\nBelow rates for the two orders, flying Dallas to Bogota:\r\n\r\nAir freight (+100 kg): $2.95/kg all in\r\n\r\nScreening: $0.12/kg, minimum $20\r\n\r\nPickup in Denton, TX: $310 flat, fuel included\r\n\r\nBoth orders can go on the same flight if they are ready by Thursday.\r\n\r\nRegards,\r\nVictor Lang\r\nJoJo Freight (Chicago)\r\nTel: 312-555-0142\r\n\r\nFrom: Joaquin Mesa\r\nSent: Tuesday, August 18, 2026 8:30 AM\r\nTo: Victor Lang\r\nSubject: URGENT AIR RATE REQUEST // TWO ORDERS\r\n\r\nPlease quote both orders by air, DFW to BOG, 180 kg in total.\r\n"
+ },
+ {
+  "name": "heres_one_more_rate_under_a_contacts_thread",
+  "why": "'rate for'",
+  "expected": "quoting",
+  "read_before": "asking",
+  "subject": "RE: MEXICO // PARTNER OFFICE CONTACT CHANGES",
+  "sent_at": "2026-08-06 11:15:00",
+  "sender_name": "JJC-VICTOR LANG",
+  "sender_address": "VictorLang@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "lupita.arce@partner-mx.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "Lupita Arce; #JJC-DESK",
+  "body": "Hi Lupita,\r\n\r\nHere’s one more 20’GP rate for your review, good until 10/15.\r\n\r\nBusan to Manzanillo\r\n\r\nOcean freight usd2940/20’gp\r\n\r\nLocal charges at both ends are extra.\r\n\r\nRegards,\r\nVictor Lang\r\nJoJo Freight (Chicago)\r\nTel: 312-555-0142\r\n\r\nFrom: Lupita Arce\r\nSent: Wednesday, August 5, 2026 6:48 PM\r\nTo: Victor Lang\r\nSubject: MEXICO // PARTNER OFFICE CONTACT CHANGES\r\n\r\nHello Victor, our Guadalajara team has two new contacts; details below.\r\nCould you also quote a 20GP Busan to Manzanillo?\r\n"
+ },
+ {
+  "name": "import_charges_with_a_delivery_rate_from_line",
+  "why": "'RATE FROM' in the charges table; the amounts are not next to a charges word",
+  "expected": "quoting",
+  "read_before": "asking",
+  "subject": "RE: ENQUIRY HKG TO LAX BY AIR / TERM DAP",
+  "sent_at": "2026-08-14 08:50:00",
+  "sender_name": "JJC-HAO RAN",
+  "sender_address": "HaoRan@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "VictorLang@jojofreight.example",
+   "import.team@tolvex.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "JJC-VICTOR LANG; import team; #JJC-DESK",
+  "body": "Leo\r\n\r\nPlease see below import side for your reference:\r\n\r\nIMPORT HANDLING USD45 /HAWB\r\n\r\nDELIVERY RATE FROM LAX TO 92821\r\n\r\nMIN USD210\r\n\r\nFUEL 38 %\r\n\r\nTERMINAL RECOVERY USD95\r\n\r\nEntry filing needs the consignee tax ID on file before arrival.\r\n\r\nRegards,\r\nHao Ran\r\nJoJo Freight, air import\r\n\r\nFrom: Leo Marsh\r\nSent: Wednesday, August 12, 2026 11:37 PM\r\nTo: Hao Ran\r\nSubject: ENQUIRY HKG TO LAX BY AIR / TERM DAP\r\n\r\nPlease quote destination charges and delivery to Brea, CA 92821.\r\n"
+ },
+ {
+  "name": "ocean_freight_table_without_a_pointer_word",
+  "why": "an O/F table under 'Hello Andres', read as asking by the RE: RATE subject",
+  "expected": "quoting",
+  "read_before": "asking",
+  "subject": "RE: COLOMBIA RATE REQUEST // FCL // TWO PORTS",
+  "sent_at": "2026-08-24 16:30:00",
+  "sender_name": "JJV-KEVIN ZHAO",
+  "sender_address": "KevinZhao@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "andres.villarroel@tolvex.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "Andres Villarroel; #JJC-DESK",
+  "body": "Hello Andres,\r\n\r\n* O/F:\r\n\r\nOAKLAND - BUENAVENTURA: USD 2,150 /40HQ\r\n\r\nOAKLAND - CARTAGENA: USD 2,480 /40HQ, via Panama\r\n\r\n* Origin side:\r\n\r\nTHC: USD 180 per container\r\n\r\nSeal and paperwork: USD 55\r\n\r\nGood through Nov 15\r\n\r\nBest regards,\r\nKevin Zhao\r\nJoJo Freight (Vancouver)\r\n\r\nFrom: Andres Villarroel\r\nSent: Friday, August 21, 2026 1:14 PM\r\nTo: Kevin Zhao\r\nSubject: COLOMBIA RATE REQUEST // FCL // TWO PORTS\r\n\r\nKevin, kindly advise your rates to Buenaventura and Cartagena.\r\n"
+ },
+ {
+  "name": "partner_circular_pleased_to_share",
+  "why": "'please send us the commodity' was read as a request",
+  "expected": "quoting",
+  "read_before": "asking",
+  "subject": "JoJo | Ningbo to Cartagena | All-In/20GP | Sailing 10 October",
+  "sent_at": "2026-09-22 09:00:00",
+  "sender_name": "JJC-IRIS CHEN",
+  "sender_address": "IrisChen@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "compras@caribe-demo.com.co"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "'compras@caribe-demo.com.co'; #JJC-DESK",
+  "body": "Dear partner,\r\n\r\nPleased to share this October's special for partner agents:\r\n\r\nNINGBO – CARTAGENA\r\n\r\n$2,380.00 all in per 20GP\r\n\r\nSailing: 10/10/2026\r\n\r\n14 days free at destination\r\n\r\nIf a booking comes up, please send us the commodity and the ready date and we will hold space.\r\n\r\nBest regards,\r\nIris Chen\r\nJoJo Freight (Chicago), partner sales\r\n\r\n"
+ },
+ {
+  "name": "rates_stay_the_same_lcl",
+  "why": "read as neither: '$47.00/CBM' is not next to a charges word",
+  "expected": "quoting",
+  "read_before": "",
+  "subject": "RE: EXW OHIO - LCL TO MANILA",
+  "sent_at": "2026-09-10 20:45:00",
+  "sender_name": "JJC-AVA TRAN",
+  "sender_address": "AvaT@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "OscarPeng@jojofreight.example",
+   "mika.santos@tolvex.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "JJC-OSCAR PENG; Mika Santos; #JJC-DESK",
+  "body": "Mika,\r\n\r\nRates stay the same. The co-loader wants the HS code before they accept it.\r\n\r\nOrigin: Detroit cfs / Dest: Manila cfs\r\n\r\n+1 cbm : $47.00/CBM\r\n\r\nBunker : $9.00/ CBM\r\n\r\nPickup in Dayton, OH: $415 (fuel in)\r\n\r\nThanks,\r\nAva Tran\r\nJoJo Freight (Chicago), LCL desk\r\n\r\n"
+ },
+ {
+  "name": "spot_rate_on_this_lane_is_ours",
+  "why": "'rate on' describes our own amount; nothing asks for theirs",
+  "expected": "quoting",
+  "read_before": "asking",
+  "subject": "RE: Two air shipments from the USA to Da Nang, Vietnam",
+  "sent_at": "2026-09-15 15:25:00",
+  "sender_name": "JJC-ERIC LO",
+  "sender_address": "EricLo@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "duc.pham@tolvex.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "Duc Pham; #JJC-DESK",
+  "body": "Hello Duc,\r\n\r\nRight now the airline will give us a spot rate on this lane of $1.05/kg all in, the best we have seen this month.\r\n\r\nThe truck leg is still open because of the crate size; I will update you tomorrow.\r\n\r\nRegards,\r\nEric Lo\r\nJoJo Freight (Chicago), export desk\r\n\r\n"
+ },
+ {
+  "name": "two_routings_and_an_alternative_option",
+  "why": "'rate for'",
+  "expected": "quoting",
+  "read_before": "asking",
+  "subject": "RE: AIR ENQUIRY // USA TO CEBU",
+  "sent_at": "2026-09-02 13:10:00",
+  "sender_name": "JJC-ERIC LO",
+  "sender_address": "EricLo@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "hana.lim@tolvex.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "Hana Lim; #JJC-DESK",
+  "body": "Hello Hana,\r\n\r\nDirect space to Cebu is tight this week, so I added Manila as an alternative option.\r\n\r\nWe also got a better rate for the pickup in Conroe.\r\n\r\nPieces: 3 crates, 610 kg\r\n\r\nDims: 120x100x90 cm, 120x100x70 cm, 80x60x60 cm\r\n\r\nIAH - CEB: $3.30/kg all in\r\n\r\nIAH - MNL: $2.45/kg all in\r\n\r\nPickup in Conroe, TX: $260\r\n\r\nRegards,\r\nEric Lo\r\nJoJo Freight (Chicago), export desk\r\n\r\nFrom: Hana Lim\r\nSent: Tuesday, September 1, 2026 7:40 PM\r\nTo: Eric Lo\r\nSubject: AIR ENQUIRY // USA TO CEBU\r\n\r\nPlease quote 3 crates from Conroe, TX to Cebu by air.\r\n"
+ },
+ {
+  "name": "vendor_asked_to_meet_our_number",
+  "why": "a target we give a vendor",
+  "expected": "asking",
+  "read_before": "asking",
+  "subject": "RE: RATE REQUEST // OH - PA // TWICE WEEKLY FTL",
+  "sent_at": "2026-09-03 10:00:00",
+  "sender_name": "JJC-VICTOR LANG",
+  "sender_address": "VictorLang@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "dispatch@hauler.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "Dispatch; #JJC-DESK",
+  "body": "Hi Glen,\r\n\r\nWe need a rate of $640.00 to keep this lane. Can you get there?\r\n\r\nRegards,\r\nVictor Lang\r\nJoJo Freight (Chicago)\r\nTel: 312-555-0142\r\n\r\n"
+ },
+ {
+  "name": "office_asked_to_contact_shipper_and_provide_rates",
+  "why": "'please reach out ... and provide cargo details, rates'",
+  "expected": "asking",
+  "read_before": "asking",
+  "subject": "NEW BOOKING // C/ALDER HOME // LCL // NGB - SEA",
+  "sent_at": "2026-09-11 09:30:00",
+  "sender_name": "JJC-VICTOR LANG",
+  "sender_address": "VictorLang@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "ops@jjx-office.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "JJX Ops; #JJC-DESK",
+  "body": "Hi Nora and Ben,\r\n\r\nWe won a new account, Alder Home, with a first LCL order from Ningbo to Seattle.\r\n\r\nPlease reach out to the shipper listed below and provide cargo details, rates and the next sailing.\r\n\r\nShipper contact: Wendy, wendy@alder-supplier.example\r\n\r\nThe customer holds $96.00/cbm ocean freight from another forwarder, so we need your best rates to beat it.\r\n\r\nRegards,\r\nVictor Lang\r\nJoJo Freight (Chicago)\r\nTel: 312-555-0142\r\n\r\n"
+ },
+ {
+  "name": "office_asked_to_arrange_and_advise_cost",
+  "why": "'please ... advise cost'",
+  "expected": "asking",
+  "read_before": "asking",
+  "subject": "LCL BOOKING FOR C/BRIGHTLEAF CRAFTS",
+  "sent_at": "2026-09-09 11:45:00",
+  "sender_name": "JJC-VICTOR LANG",
+  "sender_address": "VictorLang@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "ops@jjx-office.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "JJX Ops; #JJC-DESK",
+  "body": "Hi Mei and Jo,\r\n\r\nAn LCL order for Brightleaf Crafts will be ready soon, details below.\r\n\r\nPlease arrange with the shipper and kindly advise cost and the first sailing once you have them.\r\n\r\nCRD: 10/02\r\n\r\nFinal delivery: Reading, PA 19601 (destination CFS in Newark)\r\n\r\nRegards,\r\nVictor Lang\r\nJoJo Freight (Chicago)\r\nTel: 312-555-0142\r\n\r\n"
+ },
+ {
+  "name": "agent_asked_for_their_destination_charges",
+  "why": "a request for their charges; the table below has our cargo figures",
+  "expected": "asking",
+  "read_before": "asking",
+  "subject": "DESTINATION RATE REQUEST // C/HARBEN FOAM // LCL & FCL",
+  "sent_at": "2026-09-04 14:20:00",
+  "sender_name": "JJC-VICTOR LANG",
+  "sender_address": "VictorLang@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "import@jjx-office.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "Import team; #JJC-DESK",
+  "body": "Hi import team,\r\n\r\nKindly quote your import charges plus final delivery for the two moves below.\r\n\r\nLCL: 2 pallets, 48\" x 40\" x 52\", 310 lbs each\r\n\r\nFCL: 1 x 40HQ, 18 pallets of foam sheet\r\n\r\nHS 3921.13\r\n\r\nRegards,\r\nVictor Lang\r\nJoJo Freight (Chicago)\r\nTel: 312-555-0142\r\n\r\n"
+ },
+ {
+  "name": "vendor_asked_to_confirm_their_rate",
+  "why": "'your rate'",
+  "expected": "asking",
+  "read_before": "asking",
+  "subject": "RE: RATE REQUEST // ATL - SEVERAL AIRPORTS",
+  "sent_at": "2026-09-07 16:05:00",
+  "sender_name": "JJC-VICTOR LANG",
+  "sender_address": "VictorLang@jojofreight.example",
+  "sender_internal": true,
+  "to_addresses": [
+   "sales@aircarrier.example"
+  ],
+  "cc_addresses": [
+   "JJC-DESK@jojofreight.example"
+  ],
+  "display_to": "Sales; #JJC-DESK",
+  "body": "Hi Tomas,\r\n\r\nCan you confirm your rate is a $95 minimum, then $1.60/kg all in above that?\r\n\r\nRegards,\r\nVictor Lang\r\nJoJo Freight (Chicago)\r\nTel: 312-555-0142\r\n\r\n"
+ }
+]

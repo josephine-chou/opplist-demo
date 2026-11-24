@@ -1,0 +1,18 @@
+{
+  "note": "Invented sample truck thread, mail 2 of 3: the driver is still busy with an earlier run and the morning slot is gone ('missed' outranks 'driver').",
+  "subject": "RE: Dayton OH - Knoxville TN / dry van dispatch",
+  "sender_name": "Nora Whitfield",
+  "sender_address": "nwhitfield@ridgeback-transport.example",
+  "sender_internal": false,
+  "received_on": "2026-09-23",
+  "received_at": "2026-09-23 08:10",
+  "to_addresses": [
+    "EricLo@jojofreight.example"
+  ],
+  "cc_addresses": [],
+  "display_to": "JJC-ERIC LO",
+  "conversation_id": "CONV-TRUCK-SAMPLE",
+  "entry_id": "ENTRY-TRUCK-0923A",
+  "message_id": "<truck-driver-0923@ridgeback-transport.example>",
+  "body": "Eric,\r\n\r\nOur driver is still unloading an earlier run, so we missed the 6 to 8 am slot. The Dayton plant works late, today's pickup and tomorrow's drop both hold.\r\n\r\nNora\r\n"
+}

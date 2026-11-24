@@ -1,0 +1,88 @@
+{# The line editor of the case page's Cargo card (15b, sample mark 4): every
+   number with its unit picker attached and its conversion beside it as it
+   is typed. FCL: What, Commodity, Weight (per container or per shipment),
+   Containers, How often, Routes. Air and LCL: How many, Commodity, Size of
+   each, Weight (in total or each piece), Volume (empty: from the size),
+   Routes. `l` is the line (empty for a new one).
+   15c, the register page: `p` prefixes every name (cargo_0_pieces; data-f
+   stays the plain field), `notes` puts where a value came from under its
+   field ('from the mail: 1300 lbs'), and `both` renders the FCL and the
+   Air/LCL fields together, the card showing the ones its mode needs.
+   Batch 23 (v39): Packing is a dropdown of `packing_units` (Settings);
+   the word as written rides along unseen in pack_word. #}
+{% macro unit_pick(p, field, current, units, cls='') -%}
+  <select name="{{ p }}{{ field }}" data-f="{{ field }}"{% if cls %} class="{{ cls }}"{% endif %}>{% for u in units %}<option{% if current == u %} selected{% endif %}>{{ u }}</option>{% endfor %}</select>
+{%- endmacro %}
+{% macro src(notes, key) %}{% if notes.get(key) %}<span class="src">{{ notes[key] }}</span>{% endif %}{% endmacro %}
+{% macro num(v) %}{{ ('%g'|format(v)) if v is number else (v or '') }}{% endmacro %}
+{% macro line_editor(l, fcl, live_routes, container_types, p='', notes={}, both=false, packing_units=[]) %}
+  {% set many = live_routes|length > 1 %}
+  {% set show_fcl = fcl or both %}{% set show_other = not fcl or both %}
+  {% set of = ' only-fcl' if both else '' %}{% set oo = ' only-other' if both else '' %}
+  <div class="led" data-mode="{{ 'both' if both else ('FCL' if fcl else 'other') }}">
+    <label class="f"><span>{% if both %}<span class="only-fcl">What</span><span class="only-other">How many</span>{% else %}{{ 'What' if fcl else 'How many' }}{% endif %}</span><span class="sent">
+      <input class="s" name="{{ p }}pieces" data-f="pieces" data-num value="{{ num(l.get('pieces')) }}" placeholder="qty">
+      <select name="{{ p }}pack_unit" data-f="pack_unit" class="pack-unit" title="Packing" aria-label="Packing"><option value="">-</option>
+        {%- for u in packing_units %}<option{% if l.get('pack_unit') == u %} selected{% endif %}>{{ u }}</option>{% endfor %}
+        {%- if l.get('pack_unit') and l.get('pack_unit') not in packing_units %}<option selected>{{ l.get('pack_unit') }}</option>{% endif %}</select>
+      <input type="hidden" name="{{ p }}pack_word" data-f="pack_word" value="{{ l.get('pack_word') or '' }}"></span>{{ src(notes, 'pieces') }}</label>
+    <label class="f grow"><span>Commodity</span><input name="{{ p }}commodity" data-f="commodity" value="{{ l.get('commodity') or '' }}">{{ src(notes, 'commodity') }}</label>
+    {# D7a (v50): beside Commodity - HS codes as written, the value of the goods #}
+    <label class="f"><span>HS code</span><input name="{{ p }}hs_code" data-f="hs_code" value="{{ l.get('hs_code') or '' }}" placeholder="2507.00.10" title="One or more, comma separated: 4 to 10 digits, dots or spaces as written">{{ src(notes, 'hs_code') }}</label>
+    <label class="f"><span>Cargo value</span><input name="{{ p }}cargo_value" data-f="cargo_value" value="{{ l.get('cargo_value')|cargo_value(l.get('cargo_value_cur')) }}" placeholder="USD 12,500" title="An amount and a currency; USD when none is typed">{{ src(notes, 'cargo_value') }}</label>
+    {% if show_other %}
+    {% set no_unit = l.get('dim_l') is not none and not l.get('dims_unit') %}
+    <label class="f wide{{ oo }}"><span>Size of each</span><span class="sent">
+      <input class="s" name="{{ p }}dim_l" data-f="dim_l" data-num value="{{ num(l.get('dim_l')) }}" title="or type all three: 52 x 42 x 47 in"> <span class="x">x</span>
+      <input class="s" name="{{ p }}dim_w" data-f="dim_w" data-num value="{{ num(l.get('dim_w')) }}"> <span class="x">x</span>
+      <input class="s" name="{{ p }}dim_h" data-f="dim_h" data-num value="{{ num(l.get('dim_h')) }}">
+      <input type="hidden" name="{{ p }}dims_unit_present" value="1">
+      <select name="{{ p }}dims_unit" data-f="dims_unit"{% if no_unit %} class="ask"{% endif %}>{% if no_unit %}<option value="" selected>cm or in?</option>{% endif %}
+        {% for u in ['cm', 'in', 'mm', 'm'] %}<option{% if (l.get('dims_unit') or ('cm' if l.get('dim_l') is none else '')) == u %} selected{% endif %}>{{ u }}</option>{% endfor %}</select>
+      <span class="conv" data-conv="size"></span></span>{{ src(notes, 'size') }}</label>
+    {% endif %}
+    <label class="f wide"><span>Weight</span><span class="sent">
+      <input class="n" name="{{ p }}weight_value" data-f="weight_value" data-num value="{{ num(l.get('weight_value')) }}" placeholder="{{ '25' if fcl else '' }}" inputmode="decimal">
+      {{ unit_pick(p, 'weight_unit', l.get('weight_unit') or ('t' if fcl and l.get('weight_value') is none else 'kg'), ['kg', 'lbs', 't']) }}
+      <select name="{{ p }}weight_basis" data-f="weight_basis">
+        {% if both %}
+          {% set wb = l.get('weight_basis') or ('container' if fcl and l.get('weight_value') is none else 'total') %}
+          <option value="total"{% if wb == 'total' %} selected{% endif %}>in total</option>
+          <option value="each" class="only-other"{% if wb == 'each' %} selected{% endif %}>each piece</option>
+          <option value="container" class="only-fcl"{% if wb == 'container' %} selected{% endif %}>per container</option>
+        {% elif fcl %}
+          {% set fb = l.get('weight_basis') if l.get('weight_value') is not none else 'container' %}
+          <option value="container"{% if (fb or 'container') == 'container' %} selected{% endif %}>per container</option>
+          <option value="total"{% if fb == 'total' %} selected{% endif %}>per shipment, all containers</option>
+        {% else %}
+          <option value="total"{% if l.get('weight_basis') != 'each' %} selected{% endif %}>in total</option>
+          <option value="each"{% if l.get('weight_basis') == 'each' %} selected{% endif %}>each piece</option>
+        {% endif %}
+      </select>
+      <span class="conv" data-conv="weight"></span></span>{{ src(notes, 'weight') }}</label>
+    {% if show_fcl %}
+    <label class="f{{ of }}"><span>Containers per shipment</span><span class="sent">
+      <input class="s" name="{{ p }}container_qty" data-f="container_qty" data-num value="{{ l.get('container_qty') or '' }}"> <span class="x">x</span>
+      <select name="{{ p }}container_type" data-f="container_type"><option value="">-</option>
+        {% for c in container_types %}<option{% if l.get('container_type') == c %} selected{% endif %}>{{ c }}</option>{% endfor %}
+        {% if l.get('container_type') and l.get('container_type') not in container_types %}<option selected>{{ l.get('container_type') }}</option>{% endif %}</select></span>{{ src(notes, 'containers') }}</label>
+    <label class="f wide{{ of }}"><span>How often</span><span class="sent">
+      <input class="s" name="{{ p }}per_month" data-f="per_month" data-num value="{{ num(l.get('per_month')) }}"> <span>shipments a month, for</span>
+      <input class="s" name="{{ p }}months" data-f="months" value="{{ num(l.get('months')) }}" placeholder="24"> <span>months</span>
+      <span class="conv" data-conv="months"></span></span></label>
+    {% endif %}
+    {% if show_other %}
+    <label class="f{{ oo }}"><span>Volume</span><span class="sent">
+      <input class="n" name="{{ p }}cbm_value" data-f="cbm_value" data-num value="{{ num(l.get('cbm_value')) }}" placeholder="from size" inputmode="decimal">
+      {{ unit_pick(p, 'cbm_unit', 'cft' if 'cft' in (l.get('cbm_written') or '') else 'cbm', ['cbm', 'cft']) }}
+      <span class="conv" data-conv="volume"></span></span>{{ src(notes, 'volume') }}</label>
+    {% endif %}
+    {% if many %}
+    <label class="f wide"><span>Routes</span><span class="sent route-ticks"><input type="hidden" name="{{ p }}routes_present" value="1"><input type="hidden" name="{{ p }}routes_total" value="{{ live_routes|length }}">
+      {% set chosen = (l.get('route_ids') or '').split(',')|select|map('int')|list %}
+      {% for r in live_routes %}<label class="tick"><input type="checkbox" name="{{ p }}route" value="{{ r.id }}" {% if not chosen or r.id in chosen %}checked{% endif %}> {{ r.letter }}</label>{% endfor %}</span></label>
+    {% endif %}
+    {{ caller() if caller else '' }}
+    <label class="f"><span>Counted</span><span><input type="hidden" name="{{ p }}counted_present" value="1"><input type="checkbox" name="{{ p }}counted" value="1" data-f="counted" {% if l.get('counted', 1) %}checked{% endif %}></span></label>
+  </div>
+{% endmacro %}

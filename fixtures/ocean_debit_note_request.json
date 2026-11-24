@@ -1,0 +1,19 @@
+{
+  "note": "Invented sample ocean thread, mail 3 of 4: the destination agent asks for our debit note - a request, not an invoice. The quoted pre-alert below it ('sailed', an ETD) must not count.",
+  "subject": "RE: PRE-ALERT | HLCUSAV3Q418 | SAV - SSZ | Halden Pumps",
+  "sender_name": "Costa Verde Ops",
+  "sender_address": "ops@costaverde-cargo.example",
+  "sender_internal": false,
+  "received_on": "2026-09-12",
+  "received_at": "2026-09-12 10:05",
+  "to_addresses": [
+    "IrisChen@jojofreight.example",
+    "VictorLang@jojofreight.example"
+  ],
+  "cc_addresses": [],
+  "display_to": "Iris Chen; JJC-VICTOR LANG",
+  "conversation_id": "CONV-OCEAN-SAMPLE",
+  "entry_id": "ENTRY-OCEAN-0912",
+  "message_id": "<dn-ask-0912@costaverde-cargo.example>",
+  "body": "Hi Iris,\r\n\r\nGot the documents, all clear on our side. Kindly send your DN and we will arrange payment well ahead of arrival.\r\n\r\nRegards,\r\nCosta Verde Ops\r\n\r\nFrom: Iris Chen\r\nSent: Friday, September 11, 2026 4:20 PM\r\nSubject: PRE-ALERT | HLCUSAV3Q418\r\n\r\nPre-alert docs attached. Coral Meridian 114S sailed from Savannah with the box, ETD 9 Sep.\r\n"
+}

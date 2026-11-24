@@ -1,0 +1,14 @@
+{# 15c: a register-page line's own questions, shown inside the line: a size
+   with no unit (Register waits for it) or a unit that makes the cargo
+   implausible - both readings, cm and in, with their density, and Use in
+   / Use cm. Imported as a macro by the page; rendered on its own (with
+   `checks`) by /enquiries/new/cargo/preview. #}
+{% macro asks(checks) -%}
+{% for c in checks %}{% set words = c.text.split(': ', 1)[1] if c.text.startswith('Line ') and ': ' in c.text else c.text %}
+<div class="ck {{ c.kind }} line-ask" data-code="{{ c.code }}" data-line="{{ c.line_id }}">
+  <span class="ic">{% if c.kind == 'ok' %}&#10003;{% else %}?{% endif %}</span><span class="ck-text">{{ words[:1]|upper }}{{ words[1:] }}</span>
+  {% if c.actions %}<span class="acts">{% for label, action, value in c.actions %}<button type="button" class="button small-button{% if loop.first and c.kind != 'ok' %} primary{% endif %}" data-answer="{{ action }}" data-line="{{ c.line_id }}" data-value="{{ value }}">{{ label }}</button>{% endfor %}</span>{% endif %}
+</div>
+{% endfor %}
+{%- endmacro %}
+{% if checks is defined %}{{ asks(checks) }}{% endif %}

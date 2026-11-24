@@ -1,0 +1,23 @@
+{# The place picker (batch 23): Origin location, Dest. location
+   and Port of discharge, on the case page's route editor and the register
+   page. Never inside a <label> (in the sample a click on one x also fired
+   the next one). It posts one field, `np ~ name`: the keys it holds joined
+   with '|' (or the text a route held before it named a place); a place
+   added in its small form rides in `<field>_new` (JSON), a place marked as
+   a port or an airport in `<field>_mark` (JSON) - both written when the
+   route is saved. app.js draws the box, the list and the chips; the chips
+   here are what shows before it runs. `picks` are places.pick() dicts. #}
+{% macro place_picker(name, label, picks, side, np='', idp='', fa='', max=1, new_value='', mark_value='') %}
+<div class="f pk-f" data-pk-field="{{ name }}">
+  <span class="pk-label"{% if side == 'pod' %} data-sea="Port of discharge" data-air="Airport of destination"{% endif %}>{{ label }}</span>
+  <div class="picker" id="{{ idp }}{{ name }}" data-side="{{ side }}" data-max="{{ max }}"
+       data-picks="{{ picks|tojson|forceescape }}">
+    <input type="hidden" class="pk-value" name="{{ np }}{{ name }}" value="{{ picks|map(attribute='key')|join('|') }}"{{ fa|safe }}>
+    <input type="hidden" class="pk-new" name="{{ np }}{{ name }}_new" value="{{ new_value or '' }}"{{ fa|safe }}>
+    {%- if side == 'pod' %}<input type="hidden" class="pk-mark" name="{{ np }}{{ name }}_mark" value="{{ mark_value or '' }}"{{ fa|safe }}>{% endif %}
+    <div class="pk-box">{% for p in picks %}{% if not loop.first %}<span class="pk-or">or</span>{% endif %}<span class="pk-chip{{ ' legacy' if p.legacy else '' }}"><b>{{ p.key }}</b>{% if p.kind %}<span class="pk-m"> &middot; {{ p.kind }}</span>{% endif %}</span>{% endfor %}</div>
+    <div class="pk-list" role="listbox" hidden></div>
+  </div>
+  {{ caller() if caller else '' }}
+</div>
+{% endmacro %}

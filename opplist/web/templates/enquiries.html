@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% from "_status.html" import status_label %}
+{% block title %}{{ t.nav_enquiries }}{% endblock %}
+{% block main_class %}enquiries-page{% endblock %}
+{% block content %}
+{# Enquiries v2 (2026-09-25): the rows of this view are rendered
+   once into the pool below; app.js (enquiries v2) groups, sorts, filters,
+   searches and draws the board from their data attributes. Without the
+   script the pool is the list. #}
+{% set shown = columns|selectattr(3)|list %}
+{% set col_class = {'requester': 'col-req', 'service_mode': 'col-mode', 'status': 'col-status'} %}
+<div class="titlerow">
+  <h1>{{ t.nav_enquiries }}</h1>
+  <span class="asof"><b><span id="enq-shown">{{ rows|length }}</span> {{ t.enq_shown }}</b> &middot; {{ on_file }} {{ t.enq_on_file }}</span>
+  <form class="search" method="get" id="enq-search-form">
+    <input type="hidden" name="view" value="{{ view }}">
+    <input type="search" name="q" id="enq-q" value="{{ query }}" placeholder="{{ t.enq_search_ph }}" autofocus>
+  </form>
+</div>
+
+<div class="toolbar">
+  <div class="views">
+    {% for key, label in [('open', t.view_open), ('all', t.view_all), ('closed', t.view_closed),
+                          ('legacy', t.view_legacy), ('unconfirmed', t.view_unconfirmed),
+                          ('others', t.view_others), ('silent', 'No reply ' ~ silent_days ~ '+ days')] %}
+      <a class="view {% if view == key %}on{% endif %}" data-view="{{ key }}"
+         href="{{ url_for('enquiries', view=key, q=query or None) }}">{{ label }}<b>{{ counts[key] }}</b></a>
+    {% endfor %}
+  </div>
+  <button type="button" class="chip" data-filter="latam" data-value="Y">{{ t.trk_chip_latam }}</button>
+  {% for m in ['Air', 'FCL', 'LCL'] %}<button type="button" class="chip" data-filter="mode" data-value="{{ m }}">{{ m }}</button>{% endfor %}
+  {% for d in ['US Export', 'US Import', 'Cross-trade'] %}<button type="button" class="chip" data-filter="direction" data-value="{{ d }}">{{ d|direction }}</button>{% endfor %}
+  <details class="chip-menu" data-menu="requester">
+    <summary class="chip">{{ t.enq_requester }} <span class="v"></span><span class="caret">&#9660;</span></summary>
+    <div class="menu">
+      <button type="button" data-filter="requester" data-value="">{{ t.enq_any }}</button>
+      {% for (pid, key), n in requesters %}<button type="button" data-filter="requester" data-value="{{ pid }}" data-label="{{ key }}">{{ key }} <span class="muted">{{ n }}</span></button>{% endfor %}
+    </div>
+  </details>
+  <details class="chip-menu" data-menu="month">
+    <summary class="chip">{{ t.enq_month }} <span class="v"></span><span class="caret">&#9660;</span></summary>
+    <div class="menu">
+      <button type="button" data-filter="month" data-value="">{{ t.enq_any }}</button>
+      {% for m in months %}<button type="button" data-filter="month" data-value="{{ m }}" data-label="{{ m }}">{{ m }}</button>{% endfor %}
+    </div>
+  </details>
+  <details class="chip-menu" data-menu="scope">
+    <summary class="chip">{{ t.enq_scope }}: <span class="v">In</span><span class="caret">&#9660;</span></summary>
+    <div class="menu">
+      {% for sc in ['In', 'Out', 'all'] %}<button type="button" data-filter="scope" data-value="{{ sc }}" data-label="{{ sc }}">{{ sc }}</button>{% endfor %}
+    </div>
+  </details>
+  <span id="enq-active"></span>
+  <a class="chip enq-clear" href="{{ url_for('enquiries', view=view) }}">{{ t.clear_filters }}</a>
+</div>
+
+<div class="toolbar row2">
+  <span class="k">{{ t.enq_group_by }}</span>
+  {% for g, label in [('status', t.enq_status), ('requester', t.enq_requester), ('country', 'Requester country'), ('month', t.enq_month), ('mode', t.enq_mode), ('office', t.enq_office)] %}
+    <button type="button" class="chip" data-group="{{ g }}">{{ label }}</button>
+  {% endfor %}
+  <span class="k">{{ t.enq_sort }}</span>
+  {% for s, label in [('received_on', t.enq_received), ('last_event_on', t.enq_last_event), ('requester', t.enq_requester)] %}
+    <button type="button" class="chip" data-sort="{{ s }}">{{ label }}</button>
+  {% endfor %}
+  <span class="seg"><button type="button" id="enq-v-list" class="on">{{ t.enq_list }}</button><button type="button" id="enq-v-board">{{ t.enq_board }}</button></span>
+  <details class="columns-menu chip-menu">
+    <summary class="chip">{{ t.columns }}</summary>
+    <form method="post" action="{{ url_for('enquiries_columns') }}" class="columns-form menu">
+      <input type="hidden" name="back" value="{{ request.full_path }}">
+      <input type="hidden" name="order" value="{{ columns|map(attribute=0)|join(',') }}">
+      <input type="hidden" name="action" value="show">
+      <p class="muted">{{ t.columns_hint }}</p>
+      {% for id, label, sort_key, visible in columns %}
+        <label class="tag"><input type="checkbox" name="visible" value="{{ id }}" {% if visible %}checked{% endif %}> {{ t[label] }}</label>
+      {% endfor %}
+      <div class="row-form">
+        <button class="button primary" type="submit">{{ t.columns_apply }}</button>
+        <button class="button" type="submit" name="action" value="reset">{{ t.columns_reset }}</button>
+      </div>
+    </form>
+  </details>
+</div>
+<form method="post" action="{{ url_for('enquiries_columns') }}" id="column-order-form" hidden>
+  <input type="hidden" name="back" value="{{ request.full_path }}">
+  <input type="hidden" name="order" id="column-order" value="{{ columns|map(attribute=0)|join(',') }}">
+</form>
+
+<p class="hiddenline" id="enq-dropped"></p>
+<div id="enq-list"></div>
+<div id="enq-board"></div>
+
+<script type="application/json" id="enq-text">{{ {
+  'hints': {'New': t.enq_hint_new, 'Quoted': t.enq_hint_quoted, 'Won': t.enq_hint_won if shipments_on else t.enq_hint_won_noship,
+            'Lost': t.enq_hint_lost, 'Cancelled': t.enq_hint_cancelled, 'Dropped': t.enq_hint_dropped,
+            'Legacy': t.enq_hint_legacy, 'others': t.enq_hint_others},
+  'others_title': t.enq_others_title,
+  'show_all': t.enq_show_all, 'show_first': t.enq_show_first, 'more': t.enq_more,
+  'nothing': t.enq_nothing, 'dropped_hidden': t.dropped_hidden, 'including': t.dropped_including,
+  'show': t.dropped_show, 'any': t.enq_any, 'view': view,
+  'q': query}|tojson }}</script>
+
+{# the pool: every row of this view, once #}
+<table class="tbl enq-pool" id="enq-pool">
+  <thead><tr>
+    {% for id, label, sort_key, visible in shown %}
+      <th class="c-{{ id }} {{ col_class.get(id, '') }}" draggable="true" data-col="{{ id }}">{{ t[label] }}</th>
+    {% endfor %}
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    {% set last_on = r.last.at if r.last else '' %}
+    <tr class="enq-row" data-id="{{ r.id }}" data-status="{{ 'Legacy' if r.legacy and r.status == 'Dropped' else r.status }}" data-legacy="{{ 1 if r.legacy else 0 }}"
+        data-confirmed="{{ 1 if r.status_confirmed else 0 }}" data-scope="{{ r.scope or 'In' }}"
+        data-latam="{{ r.latam_any or r.latam or 'N' }}" data-mode="{{ r.service_mode or '' }}" data-direction="{{ r.direction or '' }}"
+        data-modes="{{ r.modes or '' }}" data-directions="{{ r.directions or '' }}"
+        data-month="{{ r.month or '' }}" data-requester="{{ r.requester_party_id }}" data-requester-name="{{ r.requester_key or '' }}"
+        data-country="{{ r.requester_country or '' }}"
+        data-owner="{{ r.owner or '' }}" data-office="{{ r.handled_by or '' }}" data-received="{{ r.received_on or '' }}" data-last="{{ last_on }}"
+        data-s-opp_no="{{ r.opp_no[4:] }}" data-s-lane="{{ r.lane_from }} {{ r.lane_to }}" data-s-incoterm="{{ r.incoterm or '' }}"
+        data-s-qty="{{ r.container_qty or r.air_weight_kg or r.lcl_cbm or '' }}" data-s-commodity="{{ r.commodity or '' }}" data-s-status="{{ r.status }}"
+        data-s-service_mode="{{ r.service_mode or '' }}" data-s-end_customer="{{ r.end_customer or '' }}"
+        data-s-scope="{{ r.scope or 'In' }}" data-s-hold="{{ r.hold_until or '' }}{{ r.hold_reason or '' }}"
+        data-s-request_group="{{ r.request_group }}"
+        data-search="{{ (r.opp_no ~ ' ' ~ (r.requester_key or '') ~ ' ' ~ r.lane_from ~ ' ' ~ r.lane_to ~ ' ' ~ (r.commodity or '') ~ ' ' ~ (r.origin_country or '') ~ ' ' ~ (r.dest_country or '') ~ ' ' ~ (r.route_places or ''))|lower }}"
+        onclick="if(!event.target.closest('a')){location='{{ url_for('enquiry', enquiry_id=r.id) }}'}">
+      {% for id, label, sort_key, visible in shown %}
+        {%- if id == 'opp_no' %}<td class="c-opp_no"><a class="opp" href="{{ url_for('enquiry', enquiry_id=r.id) }}">{{ r.opp_no }}</a>{% if r.latam == 'Y' %}<span class="lbl fill latam-chip">{{ t.latam_by_hand if r.latam_choice == 'Y' else t.latam_chip }}</span>{% endif %}{% if r.mfn %}<span class="lbl fill mfn-chip">MFN</span>{% endif %}{% if r.round %} <span class="lbl fill tone-accent round-inline">{{ t.enq_round.format(n=r.round) }}</span>{% endif %}{% if r.q_hit %}<div class="q-hit muted" title="{{ r.q_hit }}">{{ r.q_hit }}</div>{% endif %}</td>
+        {%- elif id == 'received_on' %}<td class="c-received_on">{{ r.received_on|day }}</td>
+        {%- elif id == 'requester' %}<td class="c-requester col-req req"><b>{{ r.requester_key }}</b>{% if r.handled_by %} <span class="lbl fill tone-steel office">{{ r.handled_by }}</span>{% endif %}</td>
+        {%- elif id == 'service_mode' %}<td class="c-service_mode col-mode">{% if r.service_mode %}<span class="lbl fill tone-{{ r.mode_tone }}">{{ r.service_mode }}</span>{% endif %}</td>
+        {%- elif id == 'lane' %}<td class="c-lane lane" title="{{ r.lane_from }} → {{ r.lane_to }}">{{ r.lane_from }}<span class="arrow">&rarr;</span>{{ r.lane_to }}{% if r.route_more %} <span class="lbl fill tone-grey plus-routes">+{{ r.route_more }}</span>{% endif %}</td>
+        {%- elif id == 'incoterm' %}<td class="c-incoterm inco">{{ r.incoterm or '' }}</td>
+        {%- elif id == 'qty' %}<td class="c-qty">{{ r.qty_text }}</td>
+        {%- elif id == 'commodity' %}<td class="c-commodity" title="{{ r.commodity or '' }}">{{ cut(r.commodity) }}</td>
+        {%- elif id == 'status' %}<td class="c-status col-status">{{ status_label(r.status, r.handled_by, 'lbl fill', r.legacy) }}
+            {%- if r.round %} <span class="lbl fill tone-accent">{{ t.enq_round.format(n=r.round) }}</span>{% endif %}
+            {%- if r.status == 'Quoted' and r.fu_count %} <span class="lbl fill tone-navy fu-mark">FU{{ r.last_fu_seq }} &middot; {{ r.last_fu_on|md }}</span>{% endif %}
+            {%- if not r.status_confirmed %} <span class="lbl tone-amber">{{ t.unconfirmed_badge }}</span>{% endif %}</td>
+        {%- elif id == 'hold' %}<td class="c-hold">{% if r.hold_reason %}<span class="lbl tone-amber" title="{{ r.hold_reason }}{% if r.hold_until %} · until {{ r.hold_until }}{% endif %}">on hold</span>{% endif %}</td>
+        {%- elif id == 'last_event_on' %}<td class="c-last_event_on last">{% if r.last %}<span class="lbl fill tone-{{ r.last.tone }}">{{ r.last.label }}</span><span class="on">{{ last_on|day }}</span>{% endif %}</td>
+        {%- elif id == 'end_customer' %}<td class="c-end_customer">{{ r.end_customer or '' }}</td>
+        {%- elif id == 'owner' %}<td class="c-owner">{{ r.owner or '' }}</td>
+        {%- elif id == 'request_group' %}<td class="c-request_group mono">{% if group_sizes.get(r.request_group) %}G{{ r.request_group }}{% endif %}</td>
+        {%- elif id == 'scope' %}<td class="c-scope">{{ r.scope or 'In' }}</td>
+        {%- endif %}
+      {% endfor %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if not rows %}<p class="muted enq-empty">{{ t.empty_enquiries }}</p>{% endif %}
+
+{# the board's cards, the same rows #}
+<div class="enq-kpool" id="enq-kpool" hidden>
+  {% for r in rows %}
+    <div class="kcard" data-id="{{ r.id }}" onclick="if(!event.target.closest('a')){location='{{ url_for('enquiry', enquiry_id=r.id) }}'}">
+      <div class="k1"><a class="opp" href="{{ url_for('enquiry', enquiry_id=r.id) }}">{{ r.opp_no }}</a>{% if r.service_mode %}<span class="lbl fill tone-{{ r.mode_tone }}">{{ r.service_mode }}</span>{% endif %}{% if r.handled_by %}{{ status_label(r.status, r.handled_by, 'lbl fill', r.legacy) }}{% endif %}</div>
+      <div class="k2">{{ r.requester_key }}</div>
+      <div class="k3">{{ r.lane_from }} &rarr; {{ r.lane_to }}{% if r.route_more %} +{{ r.route_more }}{% endif %}{% if r.commodity %} &middot; {{ r.commodity }}{% endif %}</div>
+      <div class="k4">{{ r.received_on|day }}{% if r.last %}<span class="lbl fill tone-{{ r.last.tone }}">{{ r.last.label }}</span><span class="on">{{ last_on|day }}</span>{% endif %}</div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

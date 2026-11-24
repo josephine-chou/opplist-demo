@@ -1,0 +1,18 @@
+{# A case's status label (2026-09-25, v31). A case handled by another
+   own office shows one steel "Handled by JJV" label instead of New or
+   Quoted - the home office does not quote or chase it - and, once it is closed, its
+   Won / Lost / Cancelled / Dropped label after that. `cls` is the page's label class
+   (the case page's pill, the Enquiries list's filled lbl, Tracking's
+   outline pill). SC1: a legacy row (imported from the old workbook, stored
+   Dropped) shows Legacy instead, with its hint; FX1: only while it is
+   Dropped - a legacy row with a real result shows that result. #}
+{% macro status_label(status, handled_by, cls='pill', legacy=False) -%}
+  {%- if legacy and status == 'Dropped' -%}
+    <span class="{{ cls }} s-legacy" title="Imported from the old workbook; outcome not recorded">Legacy</span>
+  {%- elif handled_by -%}
+    <span class="{{ cls }} tone-steel handled">Handled by {{ handled_by }}</span>
+    {%- if status in ('Won', 'Lost', 'Cancelled', 'Dropped') %} <span class="{{ cls }} s-{{ status|lower }}">{{ status }}</span>{% endif %}
+  {%- else -%}
+    <span class="{{ cls }} s-{{ (status or '')|lower }}">{{ status }}</span>
+  {%- endif -%}
+{%- endmacro %}

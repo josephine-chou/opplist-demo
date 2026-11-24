@@ -1,0 +1,32 @@
+{
+  "note": "Invented: Victor asks three JJH colleagues for their buying rate, Cc the JJC group alias and one JQM colleague. Nobody outside JoJo is on it, so the office code in the To names is what says who we asked.",
+  "subject": "RATE REQUEST // TPE - IAH",
+  "sender_name": "JJC-VICTOR LANG",
+  "sender_address": "VictorLang@jojofreight.example",
+  "sender_internal": true,
+  "received_on": "2026-08-18",
+  "received_at": "2026-08-18 08:55",
+  "to_addresses": [
+    "DanielYip@jojofreight.example",
+    "GloriaTam@jojofreight.example",
+    "KelvinHo@jojofreight.example"
+  ],
+  "cc_addresses": [
+    "jjc-mfn@jojofreight.example",
+    "InesArce@jojofreight.example"
+  ],
+  "to_names": [
+    "JJH-DANIEL YIP",
+    "JJH-GLORIA TAM",
+    "JJH-KELVIN HO"
+  ],
+  "cc_names": [
+    "#JJC-MFN",
+    "JQM-INES ARCE"
+  ],
+  "display_to": "JJH-DANIEL YIP; JJH-GLORIA TAM; JJH-KELVIN HO",
+  "conversation_id": "CONV-DEMO-OFFICE-ASK",
+  "entry_id": "ENTRY-DEMO-OFFICE-ASK",
+  "message_id": "<office-ask-0818@jojofreight.example>",
+  "body": "Hi Daniel, Gloria, Kelvin,\r\n\r\nA customer in Houston buys bicycle parts from Taipei and wants to move them by air every two weeks, roughly 600 kg a time.\r\n\r\nPlease advise your buying rate TPE - IAH, the airline you would use and any paperwork we should prepare.\r\n\r\nThanks,\r\nVictor\r\n"
+}

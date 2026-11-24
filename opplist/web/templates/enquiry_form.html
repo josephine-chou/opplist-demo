@@ -1,0 +1,509 @@
+{% extends "base.html" %}
+{% block main_class %}case-page reg-page{% endblock %}
+{% block title %}{{ t.new_enquiry }}{% endblock %}
+{% block content %}
+{# The register page, v3 (15c, export-preview/OppList_CaseV3_SAMPLE.html, the
+   third view): the case page's cards - Request, Routes, Cargo - all open
+   for input, then Register as, and one Register (and Cancel) at the
+   bottom. Nothing is saved until Register. A value read from the mail says
+   where it came from under its field. Cargo is lines only (15b): each line
+   is 15b's editor with its numbers in the units written and the
+   conversion beside them; a size without a unit is not guessed - the line
+   asks cm or in with both readings, and Register waits for the answer.
+   The totals, the checks and the rail follow the typing
+   (/enquiries/new/cargo/preview, nothing written). Register from Outlook
+   and New enquiry are the same page; New enquiry has a Subject box. #}
+{% from "_route_panels.html" import route_panels, pod_picker with context %}
+{% from "_cargo_editor.html" import line_editor %}
+{% from "_reg_asks.html" import asks %}
+{% set hints = draft.sources if draft else {} %}
+{% set quoted = draft.evidence if draft else {} %}
+{% set kept = inline if inline is defined and inline else {} %}
+{% set head = reg_header if reg_header is defined and reg_header else {} %}
+{% set from_mail = head.get('outlook') or (draft and draft.mail) %}
+{% set state = forms.field_state(values.get('service_mode'), values.get('incoterm'), values.get('service_scope')) %}
+{% macro whence(name) %}{% if hints.get(name) %}<em class="whence">{{ hints[name] }}{% if quoted.get(name) %} <span class="quoted">&ldquo;{{ quoted[name] }}&rdquo;</span>{% endif %}</em>{% endif %}{% endmacro %}
+{% macro err(name) %}{% if errors.get(name) %}<em class="err">{{ errors[name] }}</em>{% endif %}{% endmacro %}
+{% macro route_extra(v, np, idp, with_hints, kept={}) %}
+  <div class="form-grid four route-extra">
+    <label class="f"><span>Service</span>
+      <select name="{{ np }}service_scope"><option value="">not set</option>
+        {% for sc in service_scopes %}<option value="{{ sc }}" {% if v.get('service_scope') == sc %}selected{% endif %}>{{ sc }}</option>{% endfor %}
+      </select></label>
+    <label class="f"><span>Mode</span>
+      <select name="{{ np }}service_mode" id="{{ idp }}service_mode"><option value="">-</option>
+        {% for m in forms.SERVICE_MODES %}<option value="{{ m }}" {% if v.get('service_mode') == m %}selected{% endif %}>{{ m }}</option>{% endfor %}
+      </select>{% if with_hints %}{{ whence('service_mode') }}{% endif %}</label>
+    <label class="f"><span>Incoterm</span>
+      <select name="{{ np }}incoterm" id="{{ idp }}incoterm"><option value="">-</option>
+        {% for i in forms.INCOTERMS %}<option value="{{ i }}" {% if v.get('incoterm') == i %}selected{% endif %}>{{ i }}</option>{% endfor %}
+      </select>{% if with_hints %}{{ whence('incoterm') }}{% endif %}</label>
+    {{ pod_picker(v, np, idp, '', kept) }}
+  </div>
+{% endmacro %}
+{% macro reg_line(rl) %}
+  {% set p = 'cargo_' ~ rl.idx ~ '_' %}
+  <div class="reg-line" data-idx="{{ rl.idx }}" id="reg-line-{{ rl.idx }}">
+    <div class="line-head"><h3>Line <span class="ln-n">{{ rl.n }}</span></h3>
+      {% if rl.carried.get('source') == 'mail' %}<span class="pill muted-pill src">from the mail</span>{% endif %}
+      <button type="button" class="link warn" data-remove-line>Remove line</button></div>
+    {% for k, v in rl.carried.items() %}<input type="hidden" name="{{ p }}{{ k }}" data-f="{{ k }}" value="{{ v }}">{% endfor %}
+    <input type="hidden" name="{{ p }}whence" value="{{ rl.notes|tojson|forceescape }}">
+    {{ line_editor(rl.line, cargo_fcl, [], container_types, p=p, notes=rl.notes, both=true, packing_units=packing_units) }}
+    {% if rl.carried.get('notes') %}<p class="line-note muted small">Note: {{ rl.carried.get('notes') }}</p>{% endif %}
+    <div class="reg-ticks" data-reg-ticks data-p="{{ p }}" data-chosen="{{ (rl.routes or [])|join(',') }}" data-all="{{ 1 if rl.routes is none else 0 }}"></div>
+    <div class="line-asks checks" data-asks="{{ rl.idx }}">{{ asks(line_asks.get(rl.idx, [])) }}</div>
+  </div>
+{% endmacro %}
+
+<div class="crumbs"><a href="{{ url_for('enquiries') }}">{{ t.crumb_enquiries }}</a> &rsaquo; <b>{{ t.new_enquiry }}</b>
+  {% if from_mail %}<span class="pill muted-pill src-chip">from Outlook</span>{% endif %}
+  {% if group_id %}<span class="muted">- lane for group G{{ group_id }}</span>{% endif %}</div>
+<section class="card sec-card reg-head">
+  <h1 id="reg-title" data-empty="{{ t.new_enquiry }}">{{ reg_title or t.new_enquiry }}</h1>
+  {% if from_mail %}<p class="muted small reg-from">{{ t.from_outlook_title }}</p>{% endif %}
+  {# batch 14: where an attachment says something else than the mail (the mail's value kept) #}
+  {% for c in (attachment_checks or []) %}<p class="att-check"><span class="pill chk-pill">check</span> {{ c }}</p>{% endfor %}
+  {% if from_mail and head.get('subject') %}
+    <p class="mail-line">Mail: <b class="mono">{{ head.subject }}</b>{% if head.get('sender') %} &middot; {{ head.sender }}{% endif %}{% if head.get('date') %} &middot; {{ head.date|nice_date }}{% endif %}</p>
+  {% endif %}
+  {% if draft %}
+    {# AL3: a colleague's forward that could not be read (amber), another office's (muted) #}
+    {% if draft.forward_line %}<p class="fwd-line {{ 'vendor-note' if draft.forward_level == 'check' else 'muted small' }}">{{ draft.forward_line }}</p>{% endif %}
+    {% if draft.chain_line %}<p class="fwd-line chain-line muted small">{{ draft.chain_line }}</p>{% endif %}
+    {% for note in draft.notes %}<p class="note-line">{{ note }}</p>{% endfor %}
+    {% if draft.party_candidates %}
+      <p class="small"><strong>{{ t.party_candidates }}:</strong>
+      {% for m in draft.party_candidates %}<span class="pill">{{ m.key }} - {{ m.how }}</span> {% endfor %}</p>
+    {% endif %}
+    {% if draft.references %}<p class="muted small">{{ t.references_seen }}: {{ draft.references|join(', ') }}</p>{% endif %}
+    {% if draft.mail.sender_internal %}<p class="small"><span class="pill warn">internal</span> {{ draft.mail.sender_address or t.internal_sender }}</p>{% endif %}
+  {% endif %}
+</section>
+
+{% if errors %}
+  <section class="error-summary" role="alert">
+    <h2>{{ t.not_saved_title }}</h2>
+    <ul>
+      {% for field, why in errors.items() %}
+        <li><strong>{{ field|replace('_', ' ') }}</strong>: {{ why }}</li>
+      {% endfor %}
+    </ul>
+    <p>{{ t.not_saved_help }}</p>
+  </section>
+{% endif %}
+
+<div id="draft-offer" class="draft-offer" hidden>
+  <span>{{ t.restore_draft }}</span>
+  <button type="button" class="button" id="draft-restore">{{ t.restore }}</button>
+  <button type="button" class="link" id="draft-discard">{{ t.discard }}</button>
+</div>
+
+{# DD1 (2026-11-12): one block, "Already in OppList?" - the thread's case
+   (a case number, the same mail, or the same subject or conversation while
+   that case is open and recent) and the duplicate matches, each case once.
+   It and the forms its Update buttons submit sit OUTSIDE the registration
+   form below (a form inside a form is not allowed); its buttons that submit
+   the registration carry form="enquiry-form". #}
+{% set ab = already or {} %}
+{% if ab.seen %}
+  <div class="seen-before" id="seen-before">
+  {% for s in ab.seen %}
+    <p class="seen-line">
+      <span>{{ s.how }} as <a href="{{ url_for('enquiry', enquiry_id=s.id) }}" target="_blank" class="mono">{{ s.opp }}</a>
+        &middot; {{ s.row.status }}{% if s.row.requester_key %} &middot; {{ s.row.requester_key }}{% endif %}
+        {% if s.row.received_on %}&middot; received {{ s.row.received_on|day(year=True) }}{% endif %}
+        {% if s.ago %}&middot; {{ s.ago }}{% endif %}
+        &middot; {{ t.seen_new_time }}</span>
+      <a class="button small-button" href="{{ url_for('enquiry', enquiry_id=s.id) }}" target="_blank">{{ t.open }} {{ s.opp }}</a>
+      {% if s.open %}<button class="button small-button" type="submit" form="update-{{ s.id }}">{{ t.already_update.format(opp=s.opp) }}</button>{% endif %}
+    </p>
+    {% if s.open %}<form method="post" id="update-{{ s.id }}" action="{{ url_for('enquiry_update_from_outlook', enquiry_id=s.id) }}"></form>{% endif %}
+  {% endfor %}
+  </div>
+{% endif %}
+{% if ab.rows %}
+  <section class="already" role="{{ 'alert' if matches else 'status' }}" id="already">
+    <h2>{{ t.already_title }}</h2>
+    <p class="lead">{{ t.already_lead_choose if matches else t.already_lead }}</p>
+    <table class="grid tight already-rows">
+      <tbody>
+      {% for r in ab.rows %}
+        <tr class="{{ 'band-' ~ r.band if r.band else 'thread-row' }}" data-case="{{ r.id }}">
+          <td class="mono"><a href="{{ url_for('enquiry', enquiry_id=r.id) }}" target="_blank">{{ r.opp }}</a></td>
+          <td><span class="pill s-{{ (r.row.status or '')|lower }}">{{ r.row.status }}</span></td>
+          <td>{{ r.row.requester_key or '' }}</td>
+          <td>{% if r.row.received_on %}<span class="muted">received</span> {{ r.row.received_on|day(year=True) }}{% endif %}</td>
+          <td>{{ r.row|lane }}</td>
+          <td class="why">{% if r.same_mail %}<strong class="same-mail">{{ t.dedupe_same_mail }}{% if r.when %}, {{ r.when }}{% endif %}</strong>; {% endif %}{{ r.why|join('; ') }}{% if r.band %} <span class="pill chip-{{ r.band }}">{{ r.band }}</span>{% endif %}</td>
+          <td class="choices">
+            {% if r.action == 'update' %}
+              <button class="button primary" type="submit" form="update-existing">{{ t.already_update.format(opp=r.opp) }}</button>
+            {% elif r.action == 'duplicate' %}
+              <button class="button{{ ' primary' if r.same_mail else '' }}" type="submit" form="enquiry-form"
+                      name="decision" value="duplicate" formnovalidate
+                      onclick="document.getElementById('decision_target').value={{ r.id }}">{{ t.already_is.format(opp=r.opp) }}</button>
+            {% else %}
+              <a class="button" href="{{ url_for('enquiry', enquiry_id=r.id) }}" target="_blank">{{ t.open }}</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="already-actions">
+      {% if matches %}
+        <button class="button{{ ' primary' if ab.new_primary else '' }}" type="submit" form="enquiry-form"
+                name="decision" value="new">{{ t.already_new }}</button>
+        <strong class="already-pick">{{ t.already_pick }}</strong>
+      {% else %}
+        {# at load: no means fold the block and fill the form; the case is not asked about again #}
+        <button class="button{{ ' primary' if ab.new_primary else '' }}" type="button" data-hide="already"
+                onclick="document.getElementById('declined_case').value='{{ ab.rows|map(attribute='id')|join(',') }}'">{{ t.already_new }}</button>
+      {% endif %}
+    </p>
+  </section>
+  {% for r in ab.rows if r.action == 'update' %}
+  <form method="post" id="update-existing" action="{{ url_for('enquiry_update_from_outlook', enquiry_id=r.id) }}"></form>
+  {% endfor %}
+{% endif %}
+
+<form method="post" id="enquiry-form" novalidate action="{{ url_for('enquiry_new') }}"
+      data-draft-key="new-enquiry" data-preview="{{ url_for('enquiry_new_cargo_preview') }}"
+      data-must-choose="{{ 1 if matches else 0 }}" data-saving="{{ t.saving }}">
+{# 13g: one form, one case - the same token on every re-render of this form #}
+<input type="hidden" name="form_token" value="{{ form_token or '' }}">
+{% if draft %}
+  <input type="hidden" name="created_by" value="outlook">
+  <input type="hidden" name="thread_key" value="{{ values.get('thread_key', '') }}">
+  <input type="hidden" name="conversation_id" value="{{ values.get('conversation_id', '') }}">
+  <input type="hidden" name="entry_id" value="{{ values.get('entry_id', '') }}">
+  <input type="hidden" name="message_id" value="{{ draft.mail.message_id or '' }}">
+  <input type="hidden" name="sender_address" value="{{ draft.mail.sender_address }}">
+  <input type="hidden" name="sender_internal" value="{{ 1 if draft.mail.sender_internal else 0 }}">
+  <input type="hidden" name="recipient_addresses" value="{{ draft.mail.recipients|join(',') }}">
+  {% if draft.learn_domain %}<input type="hidden" name="learn_domain" value="{{ draft.learn_domain }}">{% endif %}
+  {% if draft.learn_for %}<input type="hidden" name="learn_for" value="{{ draft.learn_for }}">{% endif %}
+  {% if draft.forward_note %}<input type="hidden" name="forward_note" value="{{ draft.forward_note }}">{% endif %}
+  {# RG2a: what the reader filled, kept at Register beside what was saved (register_read), and the
+     places it found in the official lists, created only when she registers #}
+  <input type="hidden" name="reader_read" value="{{ reader_read|tojson|forceescape }}">
+  {% if draft.official_new %}<input type="hidden" name="official_new" value="{{ draft.official_new|tojson|forceescape }}">{% endif %}
+{% else %}
+  {% for name in ('thread_key', 'conversation_id', 'entry_id') %}
+    {% if values.get(name) %}<input type="hidden" name="{{ name }}" value="{{ values.get(name) }}">{% endif %}
+  {% endfor %}
+  {# a refused save of a registration from Outlook keeps where it came from (13g) #}
+  {% if mail_context %}
+    {% for name, value in mail_context.items() %}
+      {% if value %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endif %}
+    {% endfor %}
+  {% endif %}
+{% endif %}
+{% if from_mail %}
+  {# the registered subject, and the header line, ride along (15c) #}
+  <input type="hidden" name="source_subject" value="{{ values.get('source_subject') or head.get('subject') or '' }}">
+  <input type="hidden" name="mail_sender" value="{{ head.get('sender') or '' }}">
+  <input type="hidden" name="mail_date" value="{{ head.get('date') or '' }}">
+{% endif %}
+{# the text as received, the mail's cargo lines, the totals it states, the case-level answers #}
+{% if values.get('qty_raw') %}<input type="hidden" name="qty_raw" value="{{ values.get('qty_raw') }}">{% endif %}
+<input type="hidden" name="mail_cargo_text" value="{{ reg_mail_raw }}">
+<input type="hidden" name="attachment_checks" value="{{ (attachment_checks or [])|tojson|forceescape }}">
+{% for s in reg_stated %}{% set j = loop.index0 %}
+  {% for k in ['source_mail', 'source_text', 'pieces', 'pack_word', 'weight_value', 'weight_unit', 'weight_written', 'weight_kg', 'cbm', 'cbm_written', 'chargeable_kg', 'chargeable_written'] %}
+  <input type="hidden" name="stated_{{ j }}_{{ k }}" value="{{ s.get(k) if s.get(k) is not none else '' }}">{% endfor %}
+{% endfor %}
+<input type="hidden" name="cargo_decided" id="cargo-decided" value="{{ values.get('cargo_decided') or '' }}">
+<input type="hidden" name="decision_target" id="decision_target" value="{{ request.form.get('decision_target', '') }}">
+<input type="hidden" name="declined_case" id="declined_case" value="{{ declined_case or '' }}">
+{% if vendor_note %}<input type="hidden" name="vendor_note" value="{{ vendor_note }}">{% endif %}
+
+<div class="layout">
+  {# --------------------------------------------------------- rail ---- #}
+  <aside class="rail"><div class="rail-card">
+    <h2>{{ t.new_enquiry }}</h2>
+    <ol class="sections" id="reg-rail">
+      <li class="sec" data-rail="request"><a href="#request"><span class="mark"></span><span class="s-name">{{ t.sec_request }}</span><span class="state"></span></a></li>
+      <li class="sec ok" data-rail="routes"><a href="#routes"><span class="mark">&#10003;</span><span class="s-name">{{ t.sec_routes }}</span><span class="state">{{ 1 + reg_routes|length }}</span></a></li>
+      <li class="sec{{ '' if cargo_rail else ' ok' }}{{ ' miss' if cargo_rail else '' }}" data-rail="cargo"><a href="#cargo"><span class="mark">{% if not cargo_rail %}&#10003;{% endif %}</span><span class="s-name">{{ t.sec_cargo }}</span><span class="state">{{ cargo_rail }}</span></a></li>
+      <li class="sec ok" data-rail="regas"><a href="#regas"><span class="mark">&#10003;</span><span class="s-name">Register as</span><span class="state">{{ reg_status }}</span></a></li>
+    </ol>
+    <p class="legend muted small">Values read from the mail say where they came from. Nothing is saved until Register.</p>
+  </div></aside>
+
+  <div class="stack">
+  {# ---------------------------------------------------------- Request ---- #}
+  <section class="card sec-card" id="request">
+  <div class="card-head"><h2>{{ t.sec_request }}</h2></div>
+  <div class="form-grid four">
+    <label class="f required">
+      <span>Received on</span>
+      <input id="fld-received_on" type="date" name="received_on" value="{{ values.get('received_on') or '' }}" required>
+      {{ whence('received_on') }}{{ err('received_on') }}
+    </label>
+    <label class="f required">
+      <span>Requester</span>
+      <select name="requester_party_id" id="requester">
+        <option value="">-</option>
+        {% for p in parties %}
+          <option value="{{ p.id }}" data-type="{{ p.type }}" {% if values.get('requester_party_id')|string == p.id|string %}selected{% endif %}>{{ p.key }}{% if p.placeholder %} ({{ t.placeholder_badge }}){% endif %}{% if p.prospect %} (prospect){% endif %}</option>
+        {% endfor %}
+      </select>
+      <em class="note"><button type="button" class="link tiny new-party" data-toggle="new-party">{{ t.new_party_link }}</button></em>
+      {{ whence('requester_party_id') }}{{ err('requester_party_id') }}
+    </label>
+    <label class="f">
+      <span>End customer</span>
+      <input name="end_customer" id="end_customer" value="{{ values.get('end_customer') or '' }}"
+             placeholder="Actual shipper / consignee">
+      {{ whence('end_customer') }}
+    </label>
+    {# v31: the office that handles the case; JJC stores nothing #}
+    {% set handled = (values.get('handled_by') or '')|upper %}
+    <label class="f">
+      <span>Handled by</span>
+      <select name="handled_by" id="handled_by">
+        <option value="{{ home_office }}" {% if not handled %}selected{% endif %}>{{ home_office }}</option>
+        {% for code in (office_codes or []) + ([handled] if handled and handled not in (office_codes or []) else []) %}
+          <option value="{{ code }}" {% if handled == code %}selected{% endif %}>{{ code }}</option>
+        {% endfor %}
+      </select>
+      {{ whence('handled_by') }}{{ err('handled_by') }}
+    </label>
+    {# RG2b (1): from a mail, the Owner - the JJC colleague whose mail it is, else empty #}
+    {% if from_mail %}
+    <label class="f">
+      <span>Owner</span>
+      <select name="owner" id="owner">
+        <option value="" {% if not values.get('owner') %}selected{% endif %}>Not assigned</option>
+        {% for o in owners or [] %}<option value="{{ o }}" {% if values.get('owner') == o %}selected{% endif %}>{{ o }}</option>{% endfor %}
+      </select>
+      {{ whence('owner') }}
+    </label>
+    {% endif %}
+
+    {% set suggested = new_party if new_party is defined and new_party else {} %}
+    {% set new_sources = suggested.get('sources', {}) if suggested else {} %}
+    <fieldset class="inline-add" id="new-party" {% if not kept.get('new_party_key') and not suggested %}hidden{% endif %}>
+      <legend>{{ t.new_party }}</legend>
+      {% if suggested.get('similar') %}
+        <p class="similar-parties">{{ t.similar_parties }}:
+          {% for s in suggested.similar %}
+            <button type="button" class="pill link-pill" data-pick-party="{{ s.id }}" title="{{ s.detail }}">{{ s.key }}</button>
+          {% endfor %}
+        </p>
+      {% endif %}
+      {% if suggested.get('why') and not suggested.get('key') %}<p class="muted">{{ suggested.why }}</p>{% endif %}
+      {# RG2b (WC2): the MFN directory's office for the domain, or its offices to pick #}
+      {% if suggested.get('mfn') %}<p class="muted mfn-line" id="mfn-line">{{ suggested.mfn }}</p>{% endif %}
+      {% if suggested.get('mfn_offices') %}
+        <p class="muted mfn-pick" id="mfn-pick">{{ suggested.mfn_why }}:
+          {% for o in suggested.mfn_offices %}
+            <button type="button" class="pill link-pill" data-mfn-name="{{ o.company }}" data-mfn-country="{{ o.country }}"
+                    data-mfn-city="{{ o.city }}" data-mfn-no="{{ o.member }}" title="MFN {{ o.member }}">{{ o.label }}</button>
+          {% endfor %}
+        </p>
+      {% endif %}
+      <label class="f"><span>Name</span>
+        <input name="new_party_key" placeholder="Key, e.g. Tolvex" value="{{ kept.get('new_party_key', '') }}">
+        {% if new_sources.get('key') %}<em class="whence">{{ new_sources.key }}</em>{% endif %}</label>
+      <label class="f"><span>Type</span>
+        <select name="new_party_type">
+          {% for ty in party_types %}
+            <option value="{{ ty }}" {% if kept.get('new_party_type') == ty %}selected{% endif %}>{{ ty }}</option>
+          {% endfor %}
+        </select>
+        {% if new_sources.get('type') %}<em class="whence">{{ new_sources.type }}</em>{% endif %}</label>
+      <label class="f"><span>Country</span>
+        <select name="new_party_country">
+          {% for c in countries %}<option value="{{ c.name }}" {% if kept.get('new_party_country') == c.name %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+        </select>
+        {% if new_sources.get('country') %}<em class="whence">{{ new_sources.country }}</em>{% endif %}</label>
+      {% if kept.get('new_party_domain') or kept.get('new_party_domain_shown') %}
+        <label class="f"><span>Domain</span>
+          <input type="hidden" name="new_party_domain_shown" value="1">
+          <input name="new_party_domain" class="mono" value="{{ kept.get('new_party_domain', '') }}" spellcheck="false" autocomplete="off">
+          {% if new_sources.get('domain') %}<em class="whence">{{ new_sources.domain }}</em>{% endif %}{{ err('new_party_domain') }}</label>
+      {% endif %}
+      {% if kept.get('new_party_city') or kept.get('new_party_mfn_no') or suggested.get('mfn_offices') %}
+        <label class="f"><span>City</span>
+          <input name="new_party_city" value="{{ kept.get('new_party_city', '') }}"></label>
+        <label class="f"><span>MFN no.</span>
+          <input name="new_party_mfn_no" class="mono" value="{{ kept.get('new_party_mfn_no', '') }}" autocomplete="off"></label>
+      {% endif %}
+      {% if suggested.get('mfn_offices') %}
+      <script>
+        // RG2b (WC2): a MFN office picked fills the new party's fields; nothing is written until Register
+        document.querySelectorAll('#mfn-pick [data-mfn-name]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var box = document.getElementById('new-party');
+            var set = function (name, value) { var f = box.querySelector('[name="' + name + '"]'); if (f && value) { f.value = value; } };
+            set('new_party_key', b.dataset.wcaName); set('new_party_country', b.dataset.wcaCountry);
+            set('new_party_city', b.dataset.wcaCity); set('new_party_mfn_no', b.dataset.wcaNo);
+          });
+        });
+      </script>
+      {% endif %}
+    </fieldset>
+
+    {% if not from_mail %}
+    <label class="f wide">
+      <span>Subject</span>
+      <input id="fld-source_subject" name="source_subject" class="mono" value="{{ values.get('source_subject') or '' }}"
+             placeholder="the request's subject, as written">
+    </label>
+    {% endif %}
+    <label class="f wide">
+      <span>Remarks</span>
+      <textarea id="fld-remarks" name="remarks" rows="2">{{ values.get('remarks') or '' }}</textarea>
+    </label>
+  </div>
+  </section>
+
+  {% if vendors %}
+  <section class="card sec-card vendors" id="vendors">
+    <div class="card-head"><h2>{{ t.vendors_title }}</h2></div>
+    {% if vendor_note %}<p class="vendor-note">{{ vendor_note }}</p>{% endif %}
+    <p class="muted">{{ t.vendors_note }}</p>
+    {% for v in vendors %}
+      <div class="vendor-row">
+        <label class="tag">
+          <input type="checkbox" name="vendor" value="{{ v.domain }}"{% if v.checked %} checked{% endif %}>
+          <span class="mono">{% if v.office %}own office {{ v.office }}{% else %}{{ v.domain }}{% endif %}</span>
+        </label>
+        <input name="vendor_key_{{ v.domain }}" value="{{ v.key }}" aria-label="Party for {{ v.domain }}">
+        {% if v.known %}
+          <span class="pill ok">{{ t.vendor_on_file }}</span>
+          <input type="hidden" name="vendor_party_{{ v.domain }}" value="{{ v.party_id }}">
+        {% else %}
+          <span class="pill">{{ t.vendor_new_party }}</span>
+        {% endif %}
+        <input type="hidden" name="vendor_addr_{{ v.domain }}" value="{{ v.addresses|join(', ') }}">
+        <span class="whence">{{ v.addresses|join(', ') }}{% if v.note %} - {{ v.note }}{% endif %}</span>
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {# ----------------------------------------------------------- Routes ---- #}
+  <section class="card sec-card" id="routes">
+  <script type="application/json" id="place-data">{{ (place_data or {})|tojson }}</script>
+  <div class="card-head"><h2>{{ t.sec_routes }}</h2>
+    <button type="button" class="button small-button add-route" data-add-route>{{ t.add_route }}</button></div>
+
+  {% if draft and draft.location_choices %}
+    <div class="lanes body-conflict location-choice">
+      <h3>{{ t.location_choice_title }}</h3>
+      <p class="muted">{{ t.location_choice_note }}</p>
+      {% for side, choice in draft.location_choices.items() %}
+        <p><strong>{{ 'Origin' if side == 'origin' else 'Destination' }}</strong>
+          <span class="mono">{{ choice.text }}</span>:
+          {% for o in choice.options %}
+            <button type="button" class="button choice" data-target="{{ side }}_loc" data-place="{{ o.key }}">
+              {{ o.key }}{% if o.name and o.name != o.key %} &middot; {{ o.name }}{% endif %}{% if o.type %} &middot; {{ o.type }}{% endif %}</button>
+          {% endfor %}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% if draft and draft.body_conflicts %}
+    <div class="lanes body-conflict">
+      <h3>{{ t.body_conflict_title }}</h3>
+      <p class="muted">{{ t.body_conflict_note }}</p>
+      {% for side, readings in draft.body_conflicts.items() %}
+        <p><strong>{{ 'Origin' if side == 'origin' else 'Destination' }}:</strong>
+          {% for place, line in readings %}
+            <button type="button" class="button choice" data-target="{{ side }}_loc" data-place="{{ place|upper }}">{{ place }}</button>
+            <span class="whence"><span class="quoted">&ldquo;{{ line }}&rdquo;</span></span>
+          {% endfor %}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% if reg_other_lanes %}
+    <p class="other-lanes muted small">{{ t.other_reading }}:
+      {% for o in reg_other_lanes %}
+        <span class="mono">{{ o.origin or '?' }} - {{ o.dest or '?' }}</span>
+        <button type="button" class="link" data-add-route data-origin="{{ o.origin }}" data-dest="{{ o.dest }}"
+                data-origin-country="{{ o.origin_country }}" data-dest-country="{{ o.dest_country }}">Add as route</button>
+      {% endfor %}</p>
+  {% endif %}
+
+  <div class="reg-route" data-route-key="a">
+    <h3 class="route-h">Route <span class="r-letter">A</span></h3>
+    {{ route_panels(values, '', errors, state, kept, hints, quoted) }}
+    {{ route_extra(values, '', '', true, kept) }}
+  </div>
+  {% for r in reg_routes %}
+  <div class="reg-route" data-route-key="{{ r.key }}">
+    <h3 class="route-h">Route <span class="r-letter">{{ r.letter }}</span>
+      <button type="button" class="link warn" data-remove-route>Remove route</button></h3>
+    {{ route_panels(r, '', {}, forms.field_state(r.get('service_mode') or values.get('service_mode'), r.get('incoterm') or values.get('incoterm'), r.get('service_scope')), r, {}, {}, 'r' ~ r.key ~ '-', 'route_' ~ r.key ~ '_') }}
+    {{ route_extra(r, 'route_' ~ r.key ~ '_', 'r' ~ r.key ~ '-', false, r) }}
+  </div>
+  {% endfor %}
+  </section>
+
+  {# ------------------------------------------------------------ Cargo ---- #}
+  <section class="card sec-card reg-cargo{{ ' is-fcl' if cargo_fcl else '' }}" id="cargo">
+  <div class="card-head cargo-head">
+    <h2>{{ t.sec_cargo }}</h2>
+    <span class="pill chk-pill" id="cargo-check-count"{% if not cargo_asks %} hidden{% endif %}>check {{ cargo_asks }}</span>
+    <span class="r">
+      {% if reg_mail_lines or reg_mail_files or reg_mail_unread %}<button type="button" class="button small-button src-toggle" data-toggle="cargo-source" data-show="Show the mail text" data-hide="Hide the mail text">Show the mail text</button>{% endif %}
+      <button type="button" class="button small-button" data-add-line>{{ t.cargo_add_line }}</button>
+    </span>
+  </div>
+  {% if reg_mail_lines or reg_mail_files or reg_mail_unread %}
+    <div class="cargo-source" id="cargo-source" hidden>
+      {% if reg_mail_lines %}<div class="rh">the parts of the mail the reader used</div>{% endif %}
+      {% for one in reg_mail_lines %}<div class="src-line"><span class="src-text">{{ one }}</span></div>
+      {% endfor %}
+      {# batch 14: each attachment read, the lines taken from it; then the files not read #}
+      {% for f in reg_mail_files %}
+        <div class="rh att-h">{{ f.name }}</div>
+        {% for one in f.lines %}<div class="src-line"><span class="src-text">{{ one }}</span></div>
+        {% else %}<div class="src-line muted">read - nothing in it the readers use</div>{% endfor %}
+      {% endfor %}
+      {% if reg_mail_unread %}
+        <div class="rh att-h">not read</div>
+        {% for f in reg_mail_unread %}<div class="src-line muted">{{ f.name }}: {{ f.reason }}</div>{% endfor %}
+      {% endif %}
+    </div>
+  {% endif %}
+  <div id="reg-lines">
+    {% for rl in reg_lines %}{{ reg_line(rl) }}{% endfor %}
+  </div>
+  <template id="reg-line-tpl">{{ reg_line({'idx': '__I__', 'n': '__N__', 'line': {}, 'carried': {'source': 'manual'}, 'notes': {}, 'routes': none}) }}</template>
+  {% set reg = true %}
+  <div id="cargo-live">{% include "_cargo_live.html" %}</div>
+  <div id="special-handling"><fieldset class="f wide tags">
+    <legend>Special handling{% if draft and draft.sources.get('special_handling') %} <em class="whence">DG {{ draft.sources.special_handling }}</em>{% endif %}
+      {% for tag, line in ((draft.tag_lines if draft else {}) or {}).items() %}<em class="whence tag-line">{{ tag }} {{ line }}</em>{% endfor %}</legend>
+    {% for tag in special_handling %}
+      <span class="tag"><input type="checkbox" name="special_handling" value="{{ tag }}" aria-label="{{ tag }}" {% if tag in tags %}checked{% endif %}>
+        <span class="tag-text">{{ tag }}</span></span>
+    {% endfor %}
+  </fieldset></div>
+  </section>
+
+  {# ------------------------------------------------------ Register as ---- #}
+  <section class="card sec-card" id="regas">
+  <div class="card-head"><h2>Register as</h2></div>
+  <div class="regas">
+    <label class="tag"><input type="radio" name="status" value="New" {% if reg_status != 'Quoted' %}checked{% endif %}> <span class="pill s-new">New</span></label>
+    <label class="tag"><input type="radio" name="status" value="Quoted" {% if reg_status == 'Quoted' %}checked{% endif %}> <span class="pill s-quoted">Quoted</span>
+      on <input type="date" name="status_at" value="{{ reg_status_at }}" aria-label="Quoted on"></label>
+    {{ whence('status') }}{{ err('status') }}{{ err('status_at') }}
+    {% if values.get('status_at') %}<em class="hint">{{ t.status_dated }} {{ values.get('status_at') }}</em>{% endif %}
+  </div>
+  </section>
+  </div>
+</div>
+
+<div class="bottombar"><div class="inner">
+  <span class="saved" id="reg-state">{{ t.new_enquiry }} &middot; nothing is saved until Register</span>
+  <button class="button primary" type="submit" id="reg-submit">Register</button>
+  <a class="button" id="reg-cancel" href="{{ url_for('enquiries') }}">{{ t.cancel }}</a>
+</div></div>
+</form>
+{% endblock %}

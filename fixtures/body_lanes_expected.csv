@@ -1,0 +1,16 @@
+﻿name,prefill_origin,prefill_dest,candidates,note
+# prefill_*: what the form gets (blank = nothing). candidates: readings that
+# disagree, offered for her to pick, written '<side>=<place>' and joined with '|'.
+reply-quotes-the-lane-in-portuguese,,,,the lane only appears in the older mail quoted under 'De:'
+three-pod-options,,,dest=Buenaventura|dest=Cartagena|dest=Barranquilla,two POD lines name different ports
+two-origins-from-and-to,Chennai,Norfolk,,'from Chennai and Tuticorin to Norfolk' - Tuticorin makes the second lane
+from-to-with-commas,Portland,Lima,,both ends carry commas (city / state / country)
+origin-dest-labels-disagree,IAH,,dest=AMD|dest=Ahmedabad,'Dest : AMD' and 'Destination: Ahmedabad' are two readings of one side
+pol-pod-labels,Cleveland,Chittagong,,plain POL / POD labels
+pickup-address-is-not-a-lane,,,,a collection address never becomes the origin
+internal-ops-question,,,,nothing to read
+office-reply-quotes-the-original,,,,our reply on top names no lane; the quoted office mail does (see intake_expected.csv)
+agent-reply-single-place,,,,the covering note only attaches a certificate; the enquiry is the bottom of the chain (see intake_expected.csv)
+internal-forward-of-agent-request,,,,the forward says only 'Please quote' - the agent's mail below it is the enquiry (see intake_expected.csv)
+our-quote-back-to-agent,PHX,RUH,,'Origin : PHX' and 'Dest : RUH' in our own quote
+our-answer-to-office-with-customer-form,,,,our destination costs name no lane; the customer's form quoted below does (see intake_expected.csv)

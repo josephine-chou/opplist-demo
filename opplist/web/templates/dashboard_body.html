@@ -1,0 +1,100 @@
+{# The dashboard's body (2026-09-25), shared by the app page and
+   the exported file. Every chart is inline SVG from opplist.dashboard;
+   nothing here prints an OPP number. #}
+<div class="dhead">
+  <h1>Pipeline</h1>
+  <div class="tabs">
+    {% for key, label in periods %}
+      {% if standalone %}<span class="tab {{ 'on' if key == dash.period.key else '' }}">{{ label }}</span>
+      {% else %}<a class="tab {{ 'on' if key == dash.period.key else '' }}" href="{{ url_for('dashboard_page', period=key) }}">{{ label }}</a>{% endif %}
+    {% endfor %}
+  </div>
+  <div class="asof">{{ as_of }}
+    {% if not standalone %}
+      <form method="post" action="{{ url_for('export_dashboard') }}">
+        <input type="hidden" name="period" value="{{ dash.period.key }}">
+        <button class="button" type="submit">{{ t.export_dashboard_html }}</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="tiles">
+  {% for tile in dash.tiles %}
+  <div class="tile"><div class="t-label">{{ tile.label }}</div>
+    <div class="t-row"><div class="t-big">{{ tile.big }}</div>{{ tile.spark|safe }}</div>
+    <div class="t-sub">{{ tile.sub|safe }}</div></div>
+  {% endfor %}
+</div>
+{% if dash.others_line %}<p class="others-line">{{ dash.others_line }}</p>{% endif %}
+
+<div class="grid">
+  <div class="card" id="map-card">
+    <h2>Where the LATAM traffic is <small>inquiries touching each country since {{ dash.map_since }} &middot; green core = won</small></h2>
+    <div class="mapwrap">
+      <div>{{ frag.map|safe }}</div>
+      <div>
+        <table class="mini"><thead><tr><th>Country</th><th class="num">Enq.</th><th class="num">Quoted</th><th class="num">Won</th></tr></thead>
+        <tbody>
+          {% for name, t_ in dash.map_rows[:8] %}
+          <tr><td>{{ name }}</td><td class="num">{{ t_.n }}</td><td class="num">{{ t_.quoted }}</td><td class="num won">{{ t_.won or '' }}</td></tr>
+          {% else %}<tr><td colspan="4" class="muted">No LATAM inquiry since {{ dash.map_since }}.</td></tr>{% endfor %}
+        </tbody></table>
+        <h2 style="margin-top:18px">Top lanes <small>90 days</small></h2>
+        <table class="mini"><thead><tr><th>Lane</th><th class="num">Enq.</th><th class="num">Won</th></tr></thead><tbody>
+          {% for lane in dash.lanes %}
+          <tr><td>{{ lane.origin }} <span class="muted">to</span> {{ lane.dest }}</td><td class="num">{{ lane.n }}</td><td class="num won">{{ lane.won or '' }}</td></tr>
+          {% else %}<tr><td colspan="3" class="muted">No lane in the window.</td></tr>{% endfor %}
+        </tbody></table>
+      </div>
+    </div>
+  </div>
+  <div class="card" id="pipeline-card">
+    <h2>Pipeline now</h2>
+    <div class="donutwrap">{{ frag.pipeline_donut|safe }}
+      <div class="dlegend">{{ frag.pipeline_legend|safe }}</div>
+    </div>
+    <div class="note">Ball in our court: New = <b>{{ dash.pipeline.on_us }}</b>. Waiting on the other side: Quoted = <b>{{ dash.pipeline.on_them }}</b>.</div>
+    <h2 style="margin-top:16px">{{ dash.pipeline.closed_title }}</h2>
+    <div class="dlegend">{{ frag.closed_legend|safe }}</div>
+    <div class="note">90-day win rate {{ dash.pipeline.win_rate_90 }}% ({{ dash.pipeline.won_90 }} won, {{ dash.pipeline.lost_90 }} lost). Dropped are duplicates and mis-registrations, not counted.</div>
+  </div>
+</div>
+
+<div class="grid3">
+  <div class="card" id="weekly-card">
+    <h2>Requests per week <small>by who asked, last 8 weeks</small></h2>
+    {{ frag.line|safe }}
+    <div class="legend">{{ frag.group_legend|safe }}</div>
+  </div>
+  <div class="card" id="speed-card">
+    <h2>Quoted within 2 days <small>share of the week's requests, business days</small></h2>
+    {{ frag.bars|safe }}
+    <div class="note">Quoted cases only, by week of receipt; requests still unquoted are outside the share.</div>
+  </div>
+  <div class="card" id="mix-card">
+    <h2>Who sends the requests <small>{{ dash.period.mix_label }}</small></h2>
+    <div class="donutwrap">{{ frag.mix_donut|safe }}
+      <div class="dlegend">{{ frag.mix_legend|safe }}</div>
+    </div>
+    <div class="note">LATAM agents are agents based in a country of the LATAM list (Settings).</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card" id="requesters-card">
+    <h2>Top requesters <small>last 90 days</small></h2>
+    <table class="mini"><thead><tr><th>Requester</th><th class="num">Enq.</th><th class="num">Quoted</th><th class="num">Won</th></tr></thead><tbody>
+      {% for r in dash.requesters %}
+      <tr><td>{{ r.key }}<span class="muted"> &middot; {{ r.country or '' }}</span>{% if r.customer %} <span class="dc-tag">direct customer</span>{% endif %}</td><td class="num">{{ r.n }}</td><td class="num">{{ r.quoted }}</td><td class="num won">{{ r.won or '' }}</td></tr>
+      {% else %}<tr><td colspan="4" class="muted">No request in the window.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+  <div class="card" id="lost-card">
+    <h2>Why we lost <small>last 90 days</small></h2>
+    {% if dash.lost %}{{ frag.lost|safe }}{% else %}<p class="muted">No lost cases in the window.</p>{% endif %}
+    <div class="note">{{ dash.lost_note }}</div>
+  </div>
+</div>
+
+<div class="dfoot"><span></span><span>OppList schema v{{ dash.schema_version }}</span></div>

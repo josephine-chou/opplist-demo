@@ -1,0 +1,14 @@
+{# Read into lines (15b): the lines the reader found, each an open editor
+   of a new line; nothing is saved until its Save line. #}
+{% from "_cargo_editor.html" import line_editor %}
+{% for l in found %}
+<div class="unit cargo-add cargo-read" data-unit="cargo-read-{{ loop.index }}" data-unit-name="Read line {{ loop.index }}" data-new>
+  <form method="post" class="u-form u-edit" novalidate action="{{ url_for('enquiry_cargo', enquiry_id=enquiry_id) }}" hidden>
+    <h3>Read line {{ loop.index }}</h3>
+    {% if l.get('source_text') %}<input type="hidden" name="source_text" value="{{ l.get('source_text') }}">{% endif %}
+    {{ line_editor(l, cargo_fcl, live_routes, container_types, packing_units=packing_units) }}
+    <div class="foot"><button class="button primary" name="action" value="add" type="submit">Save line</button>
+      <button type="button" class="button" data-cancel>{{ t.cancel }}</button></div>
+  </form>
+</div>
+{% endfor %}

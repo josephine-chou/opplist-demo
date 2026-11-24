@@ -1,0 +1,592 @@
+# Invented mail bodies for the SPEC 5.2 body scan, written for the tests.
+# Each block starts with '=== <name>' and holds the text as Outlook would
+# hand it over. body_lanes_expected.csv says what each block should read as.
+
+=== reply-quotes-the-lane-in-portuguese
+Hello Victor,
+
+Wonderful, thank you. Our handling procedure for this account is attached for your team.
+
+Speak soon!
+
+De: JJC-VICTOR LANG <VictorLang@jojofreight.example>
+Enviada em: quinta-feira, 15 de outubro de 2026 10:42
+Para: Bianca Duarte <bduarte@rotaline.example>
+Assunto: RE: QTMLB207-1026 - RATE REQUEST // DETROIT - PERU // CPT
+
+Bianca,
+
+The customer accepted our offer, so the Maersk booking is now being set up.
+POL: Detroit
+POD: Callao, Peru
+2 x 40HQ
+
+=== three-pod-options
+Hi Victor,
+
+Could you price three alternatives for this ex-works move, please?
+
+Option A
+POD: Buenaventura/Cartagena
+
+Option B:
+POD: Barranquilla
+
+Option C:
+Santa Marta
+
+Pick up address: Keller Foundry Works, LLC, 318 Millrace Rd, Anniston, AL 36201
+QTY: 3x40HC
+General Cargo
+
+=== two-origins-from-and-to
+Hi Anika,
+
+Thanks for getting in touch - we would be glad to see where our two networks can support each other.
+
+To start, could you share your rates from Chennai and Tuticorin to Norfolk for 40'HQ?
+
+Our shipper is aiming for about $5,880 per 40'HQ.
+
+The cargo is general, no DG.
+
+=== from-to-with-commas
+Dear Victor,
+
+Hope your week is going well.
+
+Re: Portable Ultrasound Unit - Model Sonra 4
+We would like an updated air freight offer for one new portable ultrasound unit from Portland, OR, USA, to Lima, Peru.
+Shipment details follow:
+Unit: Sonra 4
+
+Packages
+
+1. Main Crate
+Dimensions: 142 x 81 x 118 cm
+Gross Weight: 212.50 kg
+
+=== origin-dest-labels-disagree
+QR Cargo team,
+
+Kindly quote on the basis below:
+
+Origin    : IAH
+Dest       : AMD
+
+Shipper : To be advised
+
+*  Destination: Ahmedabad, Gujarat, India
+*  Commodity: Epoxy Resin Pellets (non-DG)
+*  Packing: 2 Fumigated Pallets
+
+=== pol-pod-labels
+Hello Stefan,
+
+Could you check pricing for the move below:
+
+POL: Cleveland, U.S
+POD: Chittagong, Bangladesh
+TYPE: 1X40'HQ
+COMMODITY: Textile Looms (used)
+
+We would need 21 days combined free time at POD.
+
+=== pickup-address-is-not-a-lane
+Hi Roberto, Adam and Kira,
+
+We have a DG consignment to price - details below and the DGD is attached.
+
+Item
+Information
+Full Collection Address and Phone
+LOADING BAY 3
+NORTHFIELD AROMATICS, INC
+1875 CIDER MILL LANE , TRAVERSE CITY, MI 49684
+DOCK OPEN 7:00 A.M. - 11:30 A.M. EST, APPOINTMENT ONLY
+
+Product Description
+AROMA CONC. CITRUS BLEND, FLAMMABLE, PG III
+
+=== internal-ops-question
+Hi Kenji,
+
+Quick check on this booking, please.
+
+Is the shipper asking for a switch B/L on arrival?
+
+Also note the HAWB must show a US exporter of record.
+
+Thanks,
+
+Victor Lang
+
+=== office-reply-quotes-the-original
+Hi Mei,
+
+Noted, thanks. Do you still have the first offer that was sent to your client?
+
+Did that offer come from CMA CGM, as far as you know?
+
+Best Regards,
+
+Victor Lang
+
+Business Development Manager
+
+JoJo Freight (Chicago)
+
+From: JJV-MEI SUN <MeiSun@jojofreight.example>
+Sent: Wednesday, September 2, 2026 11:07 AM
+To: JJC-VICTOR LANG <VictorLang@jojofreight.example>; JJC-OSCAR PENG <OscarPeng@jojofreight.example>
+Cc: JJV-HELEN QIU <HelenQ@jojofreight.example>
+Subject: Export shipment from Savannah port to Valencia, Spain 1X40HQ // ORTEGA
+
+Hello Victor and Oscar,
+
+The shipper has confirmed they want to move 1X40HQ from Savannah port to Valencia, Spain on MSC.
+
+They picked the sailing that closes on Sept 18 (schedule pasted below). Can you hold the space and look after the export side?
+
+1x40HQ general cargo: ceramic floor tiles
+
+Cargo weight: roughly 22 tons
+
+Kindly confirm you have received this.
+
+	Mei Sun
+
+JoJo Freight (Vancouver) Inc.
+
+=== agent-reply-single-place
+Hi Fiona,
+
+Attached is the insurance certificate for this cargo.
+
+Saludos Cordiales / Best Regards
+
+
+
+De: JJC-FIONA LAM
+Enviado el: lunes, 31 de agosto de 2026 11:05
+Para: Tomas Ibanez ; Hector Salinas
+CC: #JJC-MFN ; JJC-LU FENG
+Asunto: RE: AIR DELIVERY COSTS NEEDED // TARIFA AEREA ENVIO FLORIDA- EEUU. // KRMT // TL0427-26
+
+Tomas,
+
+The airline record now shows the right piece count, thank you.
+
+We will keep working with the broker in Doral and copy you on the next update.
+
+Fiona Lam
+
+JoJo Freight (Chicago) Inc.
+
+From: Tomas Ibanez [mailto:tomas.ibanez@tolvex.example]
+Sent: Monday, August 31, 2026 9:48 AM
+To: JJC-FIONA LAM <FionaLam@jojofreight.example <mailto:FionaLam@jojofreight.example> >; Hector Salinas <hector.salinas@tolvex.example <mailto:hector.salinas@tolvex.example> >
+Cc: #JJC-MFN <JJC-MFN@jojofreight.example <mailto:JJC-MFN@jojofreight.example> >
+Subject: RE: AIR DELIVERY COSTS NEEDED // TARIFA AEREA ENVIO FLORIDA- EEUU. // KRMT // TL0427-26
+
+Fiona,
+
+The carrier has amended the piece count on their side.
+
+Saludos Cordiales / Best Regards
+
+
+
+De: JJC-LU FENG <LuFeng@jojofreight.example <mailto:LuFeng@jojofreight.example> >
+Enviado el: viernes, 28 de agosto de 2026 15:12
+Para: Tomas Ibanez <tomas.ibanez@tolvex.example <mailto:tomas.ibanez@tolvex.example> >; JJC-FIONA LAM <FionaLam@jojofreight.example <mailto:FionaLam@jojofreight.example> >
+CC: #JJC-MFN <JJC-MFN@jojofreight.example <mailto:JJC-MFN@jojofreight.example> >
+Asunto: RE: AIR DELIVERY COSTS NEEDED // TARIFA AEREA ENVIO FLORIDA- EEUU. // KRMT // TL0427-26
+
+Tomas
+
+Your invoice lists 7 packages but the air waybill draft says 6 - which one is right?
+
+Lu Feng
+
+JoJo Freight (JJC) Inc
+
+From: Tomas Ibanez <tomas.ibanez@tolvex.example <mailto:tomas.ibanez@tolvex.example> >
+Sent: Wednesday, August 26, 2026 4:30 PM
+To: JJC-LU FENG <LuFeng@jojofreight.example <mailto:LuFeng@jojofreight.example> >; JJC-FIONA LAM <FionaLam@jojofreight.example <mailto:FionaLam@jojofreight.example> >
+Subject: RE: AIR DELIVERY COSTS NEEDED // TARIFA AEREA ENVIO FLORIDA- EEUU. // KRMT // TL0427-26
+
+Lu,
+
+Space is confirmed for 29-Aug and the draft AWBs are attached.
+
+Flight plan: SCL-MIA-MCO
+
+Saludos Cordiales / Best Regards
+
+
+
+De: JJC-FIONA LAM <FionaLam@jojofreight.example <mailto:FionaLam@jojofreight.example> >
+Enviado el: miércoles, 19 de agosto de 2026 14:02
+Para: Tomas Ibanez <tomas.ibanez@tolvex.example <mailto:tomas.ibanez@tolvex.example> >; Hector Salinas <hector.salinas@tolvex.example <mailto:hector.salinas@tolvex.example> >
+Asunto: RE: AIR DELIVERY COSTS NEEDED // TARIFA AEREA ENVIO FLORIDA- EEUU. // KRMT
+
+All,
+
+Our destination costs for your client are below.
+
+Handling at destination: USD 55.00
+
+Terminal fee: USD 0.12/kg, minimum USD 95.00
+
+Truck from the airport to the consignee: USD 210.00 minimum plus fuel
+
+Customs entry: USD 145.00
+
+Fiona Lam
+
+From: Tomas Ibanez <tomas.ibanez@tolvex.example <mailto:tomas.ibanez@tolvex.example> >
+Sent: Tuesday, August 18, 2026 9:41 AM
+To: JJC-SIMON KWOK <SimonKwok@jojofreight.example <mailto:SimonKwok@jojofreight.example> >; JJC-VICTOR LANG <VictorLang@jojofreight.example <mailto:VictorLang@jojofreight.example> >; #JJC-MFN <JJC-MFN@jojofreight.example <mailto:JJC-MFN@jojofreight.example> >
+Cc: Hector Salinas <hector.salinas@tolvex.example <mailto:hector.salinas@tolvex.example> >
+Subject: AIR DELIVERY COSTS NEEDED // TARIFA AEREA ENVIO FLORIDA- EEUU. // KRMT
+
+Hello Simon,
+
+Could you send me your destination costs for this air shipment into Florida?
+
+AOD: MCO
+
+Cargo is general, non-DG
+
+
+Cargo details:
+
+*	5 pcs, 31,5 kg - 72 × 58 × 64 cm each
+*	2 pcs , 9,5 kg - 45 × 38 × 30 cm each
+
+Delivery address:
+
+*	7420 KESTREL POINT DR STE 4 ORLANDO, FLORIDA 32824, ESTADOS UNIDOS
+
+I'll wait for your reply, thanks!
+
+Saludos Cordiales / Best Regards
+
+=== internal-forward-of-agent-request
+Please quote.
+
+
+
+Derek Chan
+
+JoJo Freight | North America Region
+
+
+
+From: Omar Haddad <omar@desert-demo.com.sa>
+Sent: Monday, September 7, 2026 8:15 AM
+To: Omar Haddad <omar@desert-demo.com.sa>
+Subject: PO # PO-2026-0417 cleared for pickup (K7730)
+
+
+
+Hello all,
+
+We need an air freight offer for the order attached, please treat as urgent.
+
+
+
+1 Carton
+
+Size: 22” x 14” x 12”
+
+Weight: 9LBS
+
+Material: Carbon Brush Blocks
+
+
+
+Pick-up:
+
+Redrock Abrasives Inc
+
+4471 W Sandstone Way
+
+Sedona, AZ 86336
+
+
+
+Hours: Monday-Friday 7:30AM-2:00PM
+
+
+
+Any questions, just ask.
+
+Thank you,
+
+=== our-quote-back-to-agent
+Hello Omar,
+
+
+
+Our best rates came in with Qatar Airways, details as follows:
+
+
+
+1 Carton
+
+Size: 22” x 14” x 12”
+
+Weight: 9LBS / 4kgs / 9kgs
+
+Material: Carbon Brush Blocks
+
+
+
+Origin    : PHX
+
+Dest       : RUH
+
+
+
+Airline   : QR
+
+
+
+Air Freight           : $410.00 Min
+
+Fuel & Security  : $26.00 Min
+
+AWB Fee             : $35.00/AWB
+
+
+
+Pick up from Sedona, AZ 86336
+
+Trucking               : $185.00 Min
+
+
+
+Export Docs      : $45.00/HAWB
+
+
+
+*Rates valid until 09/22, chargeable weight basis*
+
+*Space and routing subject to carrier confirmation*
+
+
+
+Best Regards,
+
+
+
+Victor Lang
+
+Business Development Manager
+
+JoJo Freight (Chicago)
+
+
+
+From: JJC-VICTOR LANG <VictorLang@jojofreight.example>
+Sent: Tuesday, September 8, 2026 7:55 AM
+To: Omar Haddad <omar@desert-demo.com.sa>
+Cc: JJC-DEREK CHAN <DerekChan@jojofreight.example>; #JJC-MFN <JJC-MFN@jojofreight.example>
+Subject: RE: PO # PO-2026-0417 cleared for pickup (K7730)
+
+
+
+Omar,
+
+Those figures already include our contract discount with UPS.
+
+
+
+Victor Lang
+
+
+
+From: Omar Haddad <omar@desert-demo.com.sa <mailto:omar@desert-demo.com.sa> >
+Sent: Monday, September 7, 2026 10:40 PM
+To: JJC-VICTOR LANG <VictorLang@jojofreight.example <mailto:VictorLang@jojofreight.example> >
+Cc: JJC-DEREK CHAN <DerekChan@jojofreight.example <mailto:DerekChan@jojofreight.example> >; #JJC-MFN <JJC-MFN@jojofreight.example <mailto:JJC-MFN@jojofreight.example> >
+Subject: RE: PO # PO-2026-0417 cleared for pickup (K7730)
+
+
+
+Victor,
+
+Could you compare UPS / DHL courier pricing too? It may come out cheaper.
+
+We need this door-to-door.
+
+Thanks,
+
+
+
+From: JJC-VICTOR LANG <VictorLang@jojofreight.example <mailto:VictorLang@jojofreight.example> >
+Sent: Monday, September 7, 2026 2:15 PM
+To: Omar Haddad <omar@desert-demo.com.sa <mailto:omar@desert-demo.com.sa> >
+Cc: JJC-DEREK CHAN <DerekChan@jojofreight.example <mailto:DerekChan@jojofreight.example> >; #JJC-MFN <JJC-MFN@jojofreight.example <mailto:JJC-MFN@jojofreight.example> >
+Subject: RE: PO # PO-2026-0417 cleared for pickup (K7730)
+
+
+
+Omar,
+
+The airline still has to approve this one into RUH.
+
+For a parcel this size a courier works too: USD 780, about 6 days.
+
+
+
+Victor Lang
+
+
+
+From: JJC-DEREK CHAN <DerekChan@jojofreight.example <mailto:DerekChan@jojofreight.example> >
+Sent: Monday, September 7, 2026 10:02 AM
+To: #JJC-MFN <JJC-MFN@jojofreight.example <mailto:JJC-MFN@jojofreight.example> >
+Subject: FW: PO # PO-2026-0417 cleared for pickup (K7730)
+
+
+
+Please quote.
+
+
+
+Derek Chan
+
+JoJo Freight | North America Region
+
+
+
+From: Omar Haddad <omar@desert-demo.com.sa <mailto:omar@desert-demo.com.sa> >
+Sent: Monday, September 7, 2026 8:15 AM
+To: Omar Haddad <omar@desert-demo.com.sa <mailto:omar@desert-demo.com.sa> >
+Subject: PO # PO-2026-0417 cleared for pickup (K7730)
+
+
+
+Hello all,
+
+We need an air freight offer for the order attached, please treat as urgent.
+
+
+
+1 Carton
+
+Size: 22” x 14” x 12”
+
+Weight: 9LBS
+
+Material: Carbon Brush Blocks
+
+
+
+Pick-up:
+
+Redrock Abrasives Inc
+
+4471 W Sandstone Way
+
+Sedona, AZ 86336
+
+
+
+Hours: Monday-Friday 7:30AM-2:00PM
+
+
+
+Any questions, just ask.
+
+Thank you,
+
+=== our-answer-to-office-with-customer-form
+Hi Marco,
+
+
+
+Below are the destination costs for Asuncion, PY.
+
+
+
+Please note destination charges :Airline THC  USD 210
+
+Handling USD 145
+
+Customs release USD 60
+
+Pick up USD 95 + IVA ( 10%)
+
+
+
+Best Regards,
+
+
+
+Victor Lang
+
+Business Development Manager
+
+JoJo Freight (Chicago)
+
+
+
+From: JQN-MARCO PERERA <MarcoP@jojofreight.example>
+Sent: Wednesday, September 9, 2026 3:16 PM
+To: JJC-VICTOR LANG <VictorLang@jojofreight.example>
+Cc: JQN-LAURA BRANDT <LauraBrandt@jojofreight.example>; QJA-RAFI KARIM <RafiKarim@jojofreight.example>; JQN-SAM DENG <SamDeng@jojofreight.example>
+Subject: FW: Air Quote #7426 request for Lumen Brands for Pelora Home
+
+
+
+Victor -
+
+
+
+What would delivery cost for this small lot into Paraguay?
+
+
+
+Marco.
+
+
+
+Marco Perera
+
+JoJo Freight (JQN) Inc
+
+E: MarcoP@JoJo-freight.example <mailto:MarcoP@JoJo-freight.example>
+
+
+
+From: FREIGHTDESK <FREIGHTDESK@lumenbrands.example <mailto:FREIGHTDESK@lumenbrands.example> >
+Sent: Wednesday, September 9, 2026 2:58 PM
+To: QJA-NASIR HOSSAIN <NasirHossain@jojofreight.example <mailto:NasirHossain@jojofreight.example> >; QJA-RAFI KARIM <RafiKarim@jojofreight.example <mailto:RafiKarim@jojofreight.example> >; JQN-MARCO PERERA <MarcoP@jojofreight.example <mailto:MarcoP@jojofreight.example> >
+Cc: Air Quote <AirQuote@lumenbrands.example <mailto:AirQuote@lumenbrands.example> >
+Subject: Air Quote #7426 request for Lumen Brands for Pelora Home
+
+
+
+Hello JoJo team,
+Lumen Brands would like an air offer for the shipment below
+
+Origin Airport: Dhaka
+Destination Airport:Asuncion/Silvio Pettirossi International Airport, Paraguay
+Final Destination Address:VALDORA HOGAR S.A. AVENIDA LOS LAPACHOS 2275 ASUNCION 1536 PY
+Po Terms:FCA
+Freight Payment:Collect
+Air Service Type Requested:7 - 9 DAYS Economy Service
+Total Units: 540
+Total Cartons: 45
+Gross Weight (KGs): 188
+Volume (CBMs): 0.8412
+Chargeable: 188.00
+
+Reply through the quote form and mention Air Quote Number #7426.
+Quote form: https://forms.lumenbrands.example/q/7426
+
+**Quoted transit must be door-to-door, from uplift at the origin airport to delivery at our DC** Allow a single stopover at most and no stop in the US on the way. Freighter space is preferred over belly space so the cargo is not bumped. An offer that expires before the cargo ready date cannot be used.

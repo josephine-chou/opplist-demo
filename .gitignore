@@ -1,0 +1,34 @@
+# data and generated output
+*.db
+*.db-wal
+*.db-shm
+data/
+demo/*.db
+demo/mail-archive/
+demo/restore-points/
+demo/export-preview/
+demo/workbooks/
+demo/reports/
+demo/team-site/
+demo/rate-card/
+demo/site/
+demo/site-reads/
+demo/*.json
+demo/*.log
+*.log
+*.xlsx
+docs/reports/*.png
+docs/reports/
+
+# never commit the leak list
+forbidden.txt
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# the team site reads one generated file (python -m opplist demo --site-data site/data)
+site/data/

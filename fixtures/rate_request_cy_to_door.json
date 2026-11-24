@@ -1,0 +1,21 @@
+{
+ "note": "Invented: Victor asking a vendor (Orbis Worldwide) for a CY to door rate. 'Please quote below' is us asking, not us giving a rate; the lane is read from the Origin / Dest lines.",
+ "subject": "RATE REQUEST // MEMPHIS CY - SANTO DOMINGO DOOR // NON-STACKABLE SKIDS",
+ "sender_name": "JJC-VICTOR LANG",
+ "sender_address": "VictorLang@jojofreight.example",
+ "sender_internal": true,
+ "received_on": "2026-09-17",
+ "received_at": "2026-09-17 11:25",
+ "to_addresses": [
+  "dmorrow@orbisworldwide.example"
+ ],
+ "cc_addresses": [
+  "AvaT@jojofreight.example",
+  "EricLo@jojofreight.example"
+ ],
+ "display_to": "Dana Morrow (Orbis Worldwide); JJC-AVA TRAN; JJC-ERIC LO",
+ "conversation_id": "CONV-DEMO-CY-DOOR",
+ "entry_id": "ENTRY-DEMO-CY-DOOR",
+ "attachment_names": [],
+ "body": "Hi Dana,\r\n\r\nPlease quote below, door delivery from the CY:\r\n\r\nOrigin    : Memphis CY\r\n\r\nDest       : Santo Domingo, Dominican Republic\r\n\r\nDeliver to: 240 Calle Los Almendros, Santo Domingo\r\n\r\nCargo:\r\n\r\n11 SKIDS\r\n\r\n44X44X52\r\n\r\n17,380 LBS\r\n\r\nNeed 40' rate since the skids cannot be stacked.\r\n\r\nBest Regards,\r\n\r\nVictor Lang\r\nJoJo Freight (Chicago)\r\n"
+}

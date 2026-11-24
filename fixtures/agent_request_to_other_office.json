@@ -1,0 +1,21 @@
+{
+ "subject": "RATE REQUEST // FCL // MONTREAL - CALLAO // FROZEN BLUEBERRIES",
+ "sender_name": "Ignacio Varela",
+ "sender_address": "ignacio.varela@tolvex.example",
+ "sender_internal": false,
+ "received_on": "2026-08-24",
+ "received_at": "2026-08-24 15:42",
+ "to_addresses": [
+  "KevinZhao@jojofreight.example"
+ ],
+ "cc_addresses": [
+  "HelenQ@jojofreight.example",
+  "TedLu@jojofreight.example",
+  "JJC-MFN@jojofreight.example"
+ ],
+ "display_to": "JJV-KEVIN ZHAO; JJV-HELEN QIU; JJV-TED LU; #JJC-MFN",
+ "conversation_id": "CONV-DEMO-JJV-REEFER",
+ "entry_id": "ENTRY-DEMO-JJV-REEFER",
+ "body": "Hello Kevin,\r\n\r\nWe have a new reefer lane for you to price:\r\n\r\nFrozen blueberries, 2 x 40' reefer at -18 C\r\n\r\nFOB Montreal to Callao, about 24 tons per box\r\n\r\nFirst loading planned for mid October.\r\n\r\nThank you!",
+ "note": "Invented: the agent writes to JJV-Kevin Zhao, #JJC-MFN in the To line (an alias, nobody's office): the case JJV handles (v31)."
+}

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ t.nav_dashboard }}{% endblock %}
+{% block main_class %}dash-page{% endblock %}
+{% block content %}
+<style>
+{{ css }}
+</style>
+<div class="dash">
+  {% include "dashboard_body.html" %}
+</div>
+{% endblock %}

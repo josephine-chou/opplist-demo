@@ -1,0 +1,48 @@
+name: team site demo (GitHub Pages)
+
+# Publishes site/ as a static page. Nothing generated is committed: the snapshot the site reads is built
+# here from the code, for a fixed day, so the page always matches the repository. It runs only when
+# started by hand (Actions, "Run workflow"); GitHub Pages must be switched on for the repository first
+# (Settings, Pages, Source: GitHub Actions).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  # the day the demo data is relative to; the site's own clock starts there, whenever it is opened
+  DEMO_DAY: "2026-11-24"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install -r requirements.txt
+      - name: Build the demo and the site's snapshot
+        run: python -m opplist demo --out demo --seed 42 --today "$DEMO_DAY" --site-data site/data
+      - name: The site's own tests
+        run: for f in site/tests/*_test.mjs; do node "$f"; done
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,74 @@
+{# The Origin and Destination panels (v2b), one macro since v33:
+   the register page's routes and the case page's route editor. `fa` is the
+   form attribute (' form="route-form"' on the case page); `np` a prefix of
+   every field name (15c: the register page's route B is route_1_...).
+   Batch 23: Origin location and Dest. location are place pickers
+   (_place_picker.html); Dest. location takes up to four places. #}
+{% from "_place_picker.html" import place_picker %}
+{% macro whence_(name, hints, quoted) %}{% if hints.get(name) %}<em class="whence">{{ hints[name] }}{% if quoted.get(name) %} <span class="quoted">&ldquo;{{ quoted[name] }}&rdquo;</span>{% endif %}</em>{% endif %}{% endmacro %}
+{% macro route_panels(v, fa, errs, state, kept, hints, quoted, idp='', np='') %}
+{% set multi = (place_data or {}).get('max', 1) %}
+<div class="route-panels">
+  <div class="panel" id="{{ idp }}route-origin">
+    <h3>{{ t.route_origin }}</h3>
+
+  <label class="f">
+    <span>Origin country</span>
+    <select{{ fa|safe }} name="{{ np }}origin_country" id="{{ idp }}origin_country" data-side="origin">
+      <option value="">-</option>
+      {% for c in countries %}
+        <option value="{{ c.name }}" {% if v.get('origin_country') == c.name %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+    {{ whence_('origin_country', hints, quoted) }}
+  </label>
+
+  {% call place_picker('origin_loc', 'Origin location', place_picks(v, 'origin'), 'origin', np, idp, fa, 1,
+                       kept.get('origin_loc_new') or v.get('origin_loc_new') or '') %}
+    {% if errs.origin_loc %}<em class="err">{{ errs.origin_loc }}</em>{% endif %}
+    {{ whence_('origin_loc', hints, quoted) }}
+  {% endcall %}
+
+  <label class="f {{ state.origin_alt }}" data-field="origin_alt">
+    <span>Origin alt (pickup)</span>
+    <input{{ fa|safe }} id="{{ idp }}fld-origin_alt" name="{{ np }}origin_alt" value="{{ v.get('origin_alt') or '' }}">
+    {% if errs.origin_alt %}<em class="err">{{ errs.origin_alt }}</em>{% endif %}
+  </label>
+  </div>
+  <div class="arrow" aria-hidden="true">&rarr;</div>
+  <div class="panel" id="{{ idp }}route-dest">
+    <h3>{{ t.route_destination }}</h3>
+  <label class="f">
+    <span>Dest. country</span>
+    <select{{ fa|safe }} name="{{ np }}dest_country" id="{{ idp }}dest_country" data-side="dest">
+      <option value="">-</option>
+      {% for c in countries %}
+        <option value="{{ c.name }}" {% if v.get('dest_country') == c.name %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+    {{ whence_('dest_country', hints, quoted) }}
+  </label>
+
+  {% call place_picker('dest_loc', 'Dest. location', place_picks(v, 'dest'), 'dest', np, idp, fa, multi,
+                       kept.get('dest_loc_new') or v.get('dest_loc_new') or '') %}
+    {% if errs.dest_loc %}<em class="err">{{ errs.dest_loc }}</em>{% endif %}
+    {{ whence_('dest_loc', hints, quoted) }}
+  {% endcall %}
+
+  <label class="f {{ state.dest_alt }}" data-field="dest_alt">
+    <span>Dest. alt (delivery)</span>
+    <input{{ fa|safe }} id="{{ idp }}fld-dest_alt" name="{{ np }}dest_alt" value="{{ v.get('dest_alt') or '' }}">
+    {% if errs.dest_alt %}<em class="err">{{ errs.dest_alt }}</em>{% endif %}
+  </label>
+  </div>
+</div>
+{% endmacro %}
+{# The Port of discharge picker (batch 23): ports only, the destination
+   country first; Airport of destination and airports when the route's
+   mode is Air. Up to four places. #}
+{% macro pod_picker(v, np='', idp='', fa='', kept={}) %}
+{% set air = v.get('service_mode') in forms.AIR_MODES %}
+{% call place_picker('pod', 'Airport of destination' if air else 'Port of discharge', place_picks(v, 'pod'), 'pod',
+                     np, idp, fa, (place_data or {}).get('max', 1),
+                     kept.get('pod_new') or v.get('pod_new') or '', kept.get('pod_mark') or v.get('pod_mark') or '') %}{% endcall %}
+{% endmacro %}

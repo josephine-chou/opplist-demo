@@ -1,0 +1,21 @@
+{
+ "note": "Invented: a requester's reply with a counter-offer (their own selling rate, 'refer to our selling below'). Expected: needs an answer.",
+ "subject": "RE: Rate request // TAO - ATL // LCL",
+ "sender_name": "Agent contact",
+ "sender_address": "desk@counterparty.example",
+ "sender_internal": false,
+ "received_on": "2026-09-22",
+ "received_at": "2026-09-22 10:05",
+ "to_addresses": [
+  "EricLo@jojofreight.example"
+ ],
+ "cc_addresses": [],
+ "display_to": "JJC-ERIC LO",
+ "conversation_id": "CONV-DEMO-COUNTER",
+ "entry_id": "ENTRY-DEMO-COUNTER-1",
+ "attachment_names": [],
+ "body": "Dear Eric,\n\nYour level is above what the consignee will pay. Please refer to our selling below and tell us if you can work with it:\n\nItem               Selling\nOcean freight      USD 64 / cbm\nDelivery           USD 210 / shipment\n\nBest regards,\nAgent contact\n",
+ "expected": {
+  "reply_kind": "asks"
+ }
+}

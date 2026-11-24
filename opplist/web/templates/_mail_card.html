@@ -1,0 +1,74 @@
+{# The Mail card (2026-09-25), shared by the case page and the
+   shipment page (5b): the archive's view of the case - the agent thread
+   and one tab per vendor request, read through case_mail. Every mail is
+   rendered, the bodies hidden; the tabs and the rows are plain script
+   with no round trip. Read-only: the buttons post to routes that exist.
+   Expects: mail_card (tabs, info, hidden), enquiry_id, mail_back (the
+   'show older' link), and shipment (a row) on the shipment page. #}
+{% set tabs, mail_info, mail_hidden = mail_card %}
+<section class="card sec-card mailcard" id="mail">
+  <h2>{{ t.sec_mail }} <small>{% if tabs %}{{ t.mail_synced.format(at=(mail_info.last_sync_at or '-')[:16]) }}{% endif %}</small></h2>
+  {% if mail_info.behind_line %}<p class="small archive-behind" id="archive-behind">{{ mail_info.behind_line }}</p>{% endif %}
+  {% if not tabs %}
+    <p class="muted small">{{ t.mail_none }} {{ mail_info.reason }}</p>
+  {% else %}
+  <div class="mailgrid">
+    <div class="mlist">
+      <div class="tabs">
+        {% for tab in tabs %}<button type="button" class="tab {{ 'on' if loop.first else '' }}" data-tab="{{ tab.key }}">{{ tab.label }} <b>{{ tab.mails|length }}</b></button>{% endfor %}
+      </div>
+      {% for tab in tabs %}
+      <ul class="mails" id="tab-{{ tab.key }}" {% if not loop.first %}hidden{% endif %}>
+        {% for r in tab.rows %}
+        <li class="mail {{ 'on' if loop.first and loop.index0 == 0 and tab.key == 'case' else '' }} {{ 'out' if r.ours else 'in' }}" data-mail="{{ tab.key }}-{{ loop.index0 }}">
+          <div class="m-head"><span class="m-dir" title="{{ 'sent by us' if r.ours else 'received' }}">{{ '&#8599;'|safe if r.ours else '&#8600;'|safe }}</span>
+            <span class="m-from">{{ r.name }}</span>
+            {% for tag in r.tags %}<span class="pill {{ 'tag-reg' if tag == 'registered from' else ('tag-fu' if tag.startswith('FU') else ('tag-note' if tag == 'reply' else 's-' ~ tag|lower)) }}">{{ tag }}</span>{% endfor %}
+            <span class="m-when">{{ r.when|day }} {{ r.when[11:16] }}</span></div>
+          <div class="m-snip">{{ r.snippet }}</div>
+        </li>
+        {% endfor %}
+        {% if not tab.rows %}<li class="muted small">{% if tab.key == 'case' %}{{ t.mail_case_empty.format(at=(mail_info.last_sync_at or '-')[:16]) }}{% else %}{{ t.mail_empty_tab }}{% endif %}</li>{% endif %}
+      </ul>
+      {% endfor %}
+      {% if mail_hidden %}<p class="muted small"><a href="{{ mail_back }}#mail">{{ t.mail_show_older.format(n=mail_hidden) }}</a></p>{% endif %}
+    </div>
+    <div class="mread">
+      {% for tab in tabs %}{% for r in tab.rows %}
+      <div class="reading" id="read-{{ tab.key }}-{{ loop.index0 }}" {% if not (tab.key == 'case' and loop.index0 == 0) %}hidden{% endif %}>
+        <div class="r-subj">{{ r.mail.subject }}</div>
+        <div class="r-meta"><b>{{ r.name }}</b> &lt;{{ r.mail.sender_address }}&gt; &middot; {{ r.when|day }} {{ r.when[11:16] }}<br>
+          to {{ r.mail.display_to or (r.mail.to_addresses|join(', ')) }}{% if r.cc %} &middot; cc {{ r.cc }}{% endif %}</div>
+        <pre>{{ r.body }}</pre>
+        {% if r.attachments %}<div class="m-att">&#128206; {{ r.attachments|join(', ') }}</div>{% endif %}
+        <div class="m-actions">
+          {% if r.mail.entry_id %}
+          <form method="post" class="inline-form" action="{{ url_for('enquiry_open_in_outlook', enquiry_id=enquiry_id) }}">
+            <input type="hidden" name="entry_id" value="{{ r.mail.entry_id }}">
+            <button class="button small-button" type="submit">{{ t.open_in_outlook }}</button>
+          </form>
+          {% endif %}
+          {% if shipment is defined and shipment and r.mail.message_id %}
+            {# 5b: the Log forms, prefilled from this mail; nothing is written until she submits #}
+            <a class="button small-button" href="{{ url_for('shipment_page', shipment_id=shipment.id, from_mail=r.mail.message_id, **{'as': 'milestone'}) }}#form-milestone">{{ t.ship_log_as_milestone }}</a>
+            <a class="button small-button" href="{{ url_for('shipment_page', shipment_id=shipment.id, from_mail=r.mail.message_id, **{'as': 'issue'}) }}#form-issue">{{ t.ship_log_as_issue }}</a>
+          {% endif %}
+          <form method="post" class="inline-form" action="{{ url_for('enquiry_attach_thread', enquiry_id=enquiry_id) }}">
+            <input type="hidden" name="conversation_id" value="{{ r.mail.conversation_id }}">
+            <input type="hidden" name="subject" value="{{ r.mail.subject }}">
+            <input type="hidden" name="message_id" value="{{ r.mail.message_id }}">
+            <button class="button small-button" type="submit">{{ t.use_as_thread }}</button>
+          </form>
+          {% if r.mail.message_id %}
+          <form method="post" class="inline-form" action="{{ url_for('enquiry_vendors_from_outlook', enquiry_id=enquiry_id) }}">
+            <input type="hidden" name="message_id" value="{{ r.mail.message_id }}">
+            <button class="button small-button" type="submit">{{ t.log_vendor_short }}</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}{% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</section>

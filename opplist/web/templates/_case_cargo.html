@@ -1,0 +1,113 @@
+{# The Cargo card on the case page (15b, sample marks 3 and 4): cargo is
+   lines only. One row per line by mode - FCL: What, Weight, Containers,
+   How often, Routes; Air and LCL: What, Size of each, Weight, Volume (and
+   Routes with more than one route). A number a line needs and lacks reads
+   'missing' in amber. Each line is a unit (Edit, Save line, Cancel, Remove
+   line); + Add line opens an empty one. The totals strip and the checks
+   follow an open editor's typing (/cargo/preview). Show the mail text opens
+   the source lines, and Read into lines puts what the reader finds into
+   new line editors. Special handling keeps its own Edit (15a). #}
+{% from "_cargo_editor.html" import line_editor %}
+{% set fcl = cargo_fcl %}
+{% set many = live_routes|length > 1 %}
+<section class="card sec-card" id="cargo">
+<div class="card-head cargo-head">
+  <h2>{{ t.sec_cargo }}</h2>
+  {% if cargo_asks %}<span class="pill chk-pill" id="cargo-check-count" data-n="{{ cargo_asks }}">check {{ cargo_asks }}</span>{% endif %}
+  <span class="r">
+    {% if cargo_text.lines %}<button type="button" class="button small-button src-toggle" data-toggle="cargo-source" data-show="Show the mail text" data-hide="Hide the mail text">Show the mail text</button>{% endif %}
+    <button type="button" class="button small-button" data-open-unit="cargo-add">{{ t.cargo_add_line }}</button>
+  </span>
+</div>
+{% if cargo_text.lines %}
+  <div class="cargo-source" id="cargo-source" hidden>
+    {% if cargo_text.head %}<div class="rh">{{ cargo_text.head }}</div>{% endif %}
+    {% if cargo_text.label %}<div class="rh">{{ cargo_text.label }}</div>{% endif %}
+    {% for marker, text in cargo_text.lines %}<div class="src-line{% if marker == 'total' %} tot{% endif %}"><span class="mk">{% if marker == 'total' %}&Sigma;{% else %}{{ marker }}{% endif %}</span><span class="src-text">{{ text }}</span></div>
+    {% endfor %}
+    <div class="read-into"><button type="button" class="button small-button" data-read-lines="{{ url_for('enquiry_cargo_read', enquiry_id=enquiry_id) }}">Read into lines</button>
+      <span class="muted small read-msg"></span></div>
+  </div>
+{% endif %}
+<form method="post" id="cargo-answer" action="{{ url_for('enquiry_cargo', enquiry_id=enquiry_id) }}"><input type="hidden" name="action" value="answer"></form>
+
+{% if not cargo_rows %}<p class="no-lines muted">No cargo lines</p>{% endif %}
+<table class="tbl cg{{ ' fcl' if fcl else '' }}" id="cargo-lines" data-mode="{{ values.get('service_mode') or '' }}"{% if not cargo_rows %} hidden{% endif %}
+       data-preview="{{ url_for('enquiry_cargo_preview', enquiry_id=enquiry_id) }}">
+  <thead><tr><th>#</th><th>What</th>
+    {% if fcl %}<th class="num">Weight</th><th>Containers</th><th>How often</th><th>Routes</th>
+    {% else %}<th>Size of each</th><th class="num">Weight</th><th class="num">Volume</th>{% if many %}<th>Routes</th>{% endif %}{% endif %}
+    <th></th></tr></thead>
+  {% for r in cargo_rows %}{% set l = cargo_lines[loop.index0] %}
+  <tbody class="unit c-unit" data-unit="cargo-line-{{ r.id }}" data-unit-name="Cargo line {{ r.n }}" data-form="cargo-line-{{ r.id }}" data-line="{{ r.id }}">
+    <tr class="c-row line{% if not r.counted %} off{% endif %}" id="cargo-row-{{ r.id }}">
+      <td class="idx">{{ r.n }}{% if r.source == 'mail' %} <span class="pill muted-pill src">mail</span>{% endif %}</td>
+      <td><b class="val">{{ r.what }}</b>{% if r.commodity %}<span class="w">{{ r.commodity }}</span>{% endif %}{% if r.hs or r.value %}<span class="w cg-hs">{{ ('HS ' ~ r.hs) if r.hs else '' }}{{ ' · ' if r.hs and r.value else '' }}{{ r.value }}</span>{% endif %}{% if not r.counted %}<span class="w">not counted</span>{% endif %}</td>
+      {% if fcl %}
+        <td class="num"><span class="val{% if r.weight_missing %} miss{% endif %}">{{ r.weight }}</span>{% if r.weight_sub %}<span class="w">{{ r.weight_sub }}</span>{% endif %}</td>
+        <td><span class="val{% if r.containers_missing %} miss{% endif %}">{{ r.containers or 'missing' }}</span>{% if r.containers_sub %}<span class="w">{{ r.containers_sub }}</span>{% endif %}</td>
+        <td><span class="val">{{ r.often or '-' }}</span>{% if r.often_sub %}<span class="w">{{ r.often_sub }}</span>{% endif %}</td>
+        <td><span class="chip">{{ r.routes }}</span></td>
+      {% else %}
+        <td><span class="val{% if r.size_none %} m{% endif %}">{{ r.size }}</span>{% if r.size_sub %}<span class="w{% if r.size_warn %} warn{% endif %}">{{ r.size_sub }}</span>{% endif %}</td>
+        <td class="num"><span class="val{% if r.weight_missing %} miss{% endif %}">{{ r.weight }}</span>{% if r.weight_sub %}<span class="w">{{ r.weight_sub }}</span>{% endif %}</td>
+        <td class="num"><span class="val{% if r.volume_missing %} miss{% endif %}">{{ r.volume }}</span>{% if r.volume_sub %}<span class="w">{{ r.volume_sub }}</span>{% endif %}</td>
+        {% if many %}<td><span class="chip">{{ r.routes }}</span></td>{% endif %}
+      {% endif %}
+      <td class="row-links"><button type="button" class="link u-edit-btn" data-edit>{{ t.edit }}</button></td>
+    </tr>
+    <tr class="c-edit u-edit" id="cargo-edit-{{ r.id }}" hidden><td colspan="7">
+      <form method="post" class="u-form" id="cargo-line-{{ r.id }}" novalidate action="{{ url_for('enquiry_cargo', enquiry_id=enquiry_id) }}">
+        <input type="hidden" name="line_id" value="{{ r.id }}">
+        {{ line_editor(l, fcl, live_routes, container_types, packing_units=packing_units) }}
+        <div class="foot"><button class="link warn remove" name="action" value="void" type="submit">Remove line</button>
+          <button class="button primary" name="action" value="save" type="submit">Save line</button>
+          <button type="button" class="button" data-cancel>{{ t.cancel }}</button></div>
+      </form>
+    </td></tr>
+  </tbody>
+  {% endfor %}
+</table>
+{% if cargo_view and cargo_view.voided %}
+  <details class="voided-vendors"><summary>{{ t.cargo_voided.format(n=cargo_view.voided|length) }}</summary>
+    <table class="tbl cargo"><tbody>
+    {% for l in cargo_view.voided %}
+      <tr class="voided"><td class="mono">{{ l.label or l.seq }}</td><td>{{ l|packing }}</td><td>{{ l.commodity or '' }}</td>
+        <td class="row-links"><form method="post" class="inline-form" action="{{ url_for('enquiry_cargo', enquiry_id=enquiry_id) }}">
+          <input type="hidden" name="line_id" value="{{ l.id }}">
+          <button class="link" name="action" value="unvoid" type="submit">{{ t.unvoid }}</button></form></td></tr>
+    {% endfor %}
+    </tbody></table>
+  </details>
+{% endif %}
+{# + Add line: an empty line editor, a unit like the others #}
+<div class="unit cargo-add" data-unit="cargo-add" data-unit-name="New cargo line">
+  <form method="post" class="u-form u-edit" id="cargo-add-form" novalidate action="{{ url_for('enquiry_cargo', enquiry_id=enquiry_id) }}" hidden>
+    <h3>New line</h3>
+    {{ line_editor({}, fcl, live_routes, container_types, packing_units=packing_units) }}
+    <div class="foot"><button class="button primary" name="action" value="add" type="submit">Save line</button>
+      <button type="button" class="button" data-cancel>{{ t.cancel }}</button></div>
+  </form>
+</div>
+<div id="cargo-new-lines"></div>
+<div id="cargo-live">{% include "_cargo_live.html" %}</div>
+
+{# Special handling: its own small unit (15a); the marker says the boxes
+   are on the form, since unticked boxes are not posted #}
+<div class="unit special-unit" data-unit="special" data-unit-name="Special handling">
+  <div class="unit-head"><h3>Special handling</h3><span class="us">&#9679; {{ t.edited_not_saved }}</span>
+    <button type="button" class="button small-button u-edit-btn" data-edit>{{ t.edit }}</button></div>
+  <div class="u-read">{% for tag in tags %}<span class="pill muted-pill">{{ tag }}</span> {% else %}<span class="m">{{ t.none_word }}</span>{% endfor %}</div>
+  <form method="post" class="u-form u-edit" novalidate action="{{ url_for('enquiry', enquiry_id=enquiry_id) }}" hidden>
+    <input type="hidden" name="special_handling_present" value="1">
+    <fieldset class="f wide tags"><legend class="sr">Special handling</legend>
+      {% for tag in special_handling %}
+        <span class="tag"><input type="checkbox" name="special_handling" value="{{ tag }}" aria-label="{{ tag }}" {% if tag in tags %}checked{% endif %}>
+          <span class="tag-text">{{ tag }}</span></span>
+      {% endfor %}
+    </fieldset>
+    <div class="foot"><button class="button primary" type="submit">{{ t.save }}</button>
+      <button type="button" class="button" data-cancel>{{ t.cancel }}</button></div>
+  </form>
+</div>
+</section>

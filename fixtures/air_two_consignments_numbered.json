@@ -1,0 +1,19 @@
+{
+ "note": "Invented sample: an agent in Guangzhou asks for two numbered air consignments CAN-ATL DAP in one mail, forwarded by Derek. '6Ptls/1480KGSKG/1.3CBM 110*70*28(CM)*6' to Marietta, GA and '12Ptls/2960KGSKGSKG/2.6CBM 110*70*28(CM)*12' to Rome, GA. Two cargo lines, chargeable 1480 and 2960 kg, totals 4440 kg and 3.9 cbm.",
+ "subject": "Fwd: CAN-ATL air enquiry DAP (2 shpts) 20260923",
+ "sender_name": "JJC-DEREK CHAN",
+ "sender_address": "DerekChan@jojofreight.example",
+ "sender_internal": true,
+ "received_on": "2026-09-23",
+ "received_at": "2026-09-23 10:05:12",
+ "to_addresses": [
+  "JJC-MFN@jojofreight.example"
+ ],
+ "cc_addresses": [],
+ "display_to": "#JJC-MFN",
+ "conversation_id": "CONV-DEMO-CAN-ATL",
+ "entry_id": "ENTRY-DEMO-CAN-ATL-0923",
+ "message_id": "<can-atl-two-0923@jojofreight.example>",
+ "attachment_names": [],
+ "body": "Derek Chan\r\nJoJo Freight\r\n\r\nBegin forwarded message:\r\n\r\n\tFrom: Wendy Luo <quote3@pearlriver-cargo.example>\r\n\tDate: September 23, 2026 at 08:41:02 GMT+8\r\n\tTo: JJC-DEREK CHAN <DerekChan@jojofreight.example>\r\n\tSubject: CAN-ATL air enquiry DAP (2 shpts) 20260923\r\n\r\n\tHello Derek\r\n\r\n\t1.We need your DAP offer CAN-ATL for the first lot, airport to door\r\n\tpiece/weight/vol:6Ptls/1480KGSKG/1.3CBM  110*70*28(CM)*6\r\n\tName ： General cargo\r\n\tDelivery address：  905 E. Linden Avenue, Marietta, GA 30060\r\n\r\n\r\n\t2.Same routing for the second lot, a different consignee\r\n\tpiece/weight/vol:12Ptls/2960KGSKGSKG/2.6CBM  110*70*28(CM)*12\r\n\tName ： General cargo\r\n\tDelivery address：  2210 HOLLOW CREEK DR./ ROME, GA 30161\r\n\r\n\tWaiting for your good news.\r\n\r\n\tWendy Luo\r\n\tPearl River Cargo (demo)\r\n"
+}

@@ -1,0 +1,217 @@
+{# The suggestions read out of the mail (E1, schema v40), on the
+   case page and the shipment page - one macro. `items` are
+   suggestions.view() rows; `gone` the dismissed ones; `back` is where the
+   buttons return to. A status or note row says what Accept writes (the
+   case's label, an arrow, the label of the write - suggestions.plan(), the
+   same function Accept writes from); Edit opens the case page's own
+   action fields under the row, prefilled with that write. Needs the case
+   page's context for those fields. W2b: a Won or Lost from the team site
+   (item.site) shows who sent it and the mail that says so - the pictures
+   (click for full size), the text, or the forwarded mail. #}
+{% from "_status_fields.html" import act_fields with context %}
+{% from "_status.html" import status_label %}
+{% set FIELDS = {'quoted': 'quoted', 'requote': 'requoted', 'history_quoted': 'quoted', 'history_requote': 'requoted',
+                 'won': 'won', 'lost': 'lost', 'cancelled': 'cancelled', 'note': 'note'} %}
+
+{% macro what(s, item) %}
+  {% if s.kind == 'followup' %}
+    {# FX7: a chaser of ours the morning scan found; Accept writes the follow-up #}
+    {% if item.fu %}<span class="pill step">FU{{ item.fu.seq }}{% if item.fu.on == 'question' %} &middot; our question{% endif %}</span>
+      <div class="sg-fu-line">{{ item.fu.line }}</div>
+    {% else %}<span class="pill step">FU{% if s.proposed_status == 'question' %} &middot; our question{% endif %}</span> found in the mail{% endif %}
+  {% elif s.kind == 'edit' %}
+    {# D7b: a change from the team site that met one she made in OppList #}
+    <span class="pill p-delay">Team site change</span>
+    {% for line in item.edit_lines or [] %}<div class="sg-edit-line">{{ line }}</div>{% endfor %}
+  {% elif s.kind == 'tag' %}
+    {# FX5: a later mail says the cargo cannot be stacked (kind tag, v50) #}
+    <span class="pill p-delay">Add {{ s.note }}</span>
+  {% elif item.plan %}
+    <span class="pill s-{{ (s.current_status or '')|lower }}">{{ s.current_status }}</span> <span class="arrow">&rarr;</span>
+    <span class="pill {{ item.plan.tone }}">{{ item.plan.label }}</span>
+  {% elif s.kind == 'shipment_milestone' and not s.shipment_id %}
+    <span class="pill p-transit">Start shipment</span> <span class="pill p-transit">{{ s.proposed_status }}</span>
+  {% elif s.kind == 'shipment_milestone' %}
+    <span class="pill p-transit">{{ s.proposed_status }}</span>{% if s.proposed_eta %} <span class="muted">ETA {{ s.proposed_eta }}</span>{% endif %}
+  {% elif s.kind == 'shipment_issue' %}
+    <span class="pill p-delay">{{ s.proposed_status }}</span>{% if s.proposed_eta %} <span class="muted">ETA {{ s.proposed_eta }}</span>{% endif %}
+  {% elif s.kind == 'shipment_note' %}
+    <span class="pill muted-pill">{{ t.note_only }}</span> {{ s.proposed_status }}
+  {% elif s.kind == 'case_number' %}
+    <span class="pill p-delay">{{ s.proposed_status }}</span> <span class="mono">{{ s.named_cases }}</span>
+  {% elif s.kind == 'vendor' %}
+    <span class="pill">{{ t.log_vendor_request }}</span> <strong>{{ s.vendor_key }}</strong>
+    <span class="mono muted">{{ s.vendor_domain }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro site_evidence(s, e) %}
+  <div class="sg-site">Sent on the team site by <strong>{{ e.by }}</strong> &middot; {{ s.evidence_date }}</div>
+  {% if e.reason_gone %}<div class="warnline">&lsquo;{{ s.closed_reason }}&rsquo; is no longer a Lost reason in Settings: Edit to pick one.</div>{% endif %}
+  {% if e.evidence == 'forwarded' %}
+    {% if e.found %}
+      <div class="small">{{ e.mail }}</div>
+      <form method="post" class="inline-form" action="{{ url_for('enquiry_open_in_outlook', enquiry_id=s.enquiry_id) }}">
+        <input type="hidden" name="entry_id" value="{{ s.entry_id }}">
+        <button class="button small-button" type="submit">{{ t.open_in_outlook }}</button>
+      </form>
+    {% else %}
+      <div class="muted small">Forwarded mail not seen yet</div>
+    {% endif %}
+  {% else %}
+    {% if e.images %}<div class="sg-pics">
+      {% for n in e.images %}<a href="{{ url_for('site_evidence', action_id=e.id, name=n) }}" target="_blank" rel="noopener" title="Full size"><img src="{{ url_for('site_evidence', action_id=e.id, name=n) }}" alt="Pasted mail, picture {{ loop.index }}"></a>{% endfor %}
+    </div>{% endif %}
+    {% if e.text %}<pre class="sg-text">{{ e.text }}</pre>{% endif %}
+    {% if e.unreadable %}<div class="warnline">The pasted mail could not be read.</div>{% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro edit_form(item, back) %}
+  {% set s = item.row %}
+  <form method="post" class="af sg-form" action="{{ url_for('suggestion_edit', suggestion_id=s.id) }}">
+    <input type="hidden" name="next" value="{{ back }}">
+    {% if item.plan %}
+      <div class="row"><label class="f"><span>Record as</span>
+        <select name="record_as" data-sg-as>
+          {% for value, label, mine in item.options %}<option value="{{ value }}"{% if mine %} selected{% endif %}>{{ label }}{% if mine %} (suggested){% endif %}</option>{% endfor %}
+        </select></label></div>
+      {% for value, label, mine in item.options %}
+        <fieldset class="sg-as" data-as="{{ value }}"{% if not mine %} disabled hidden{% endif %}>
+          {{ act_fields(FIELDS[value], item.prefill, 'sg' ~ s.id ~ '-' ~ value ~ '-') }}
+        </fieldset>
+      {% endfor %}
+    {% elif s.kind == 'followup' %}
+      {# FX7: the follow-up's date and note; the mail's [mid:] is kept on save #}
+      {% set v = item.prefill %}
+      <div class="row">
+        <label class="f"><span>{{ t.date }}</span><input type="date" name="date" value="{{ v.date }}" required></label>
+        <label class="f grow"><span>{{ t.note }}</span><input name="note" value="{{ v.note }}"></label>
+      </div>
+    {% else %}
+      {% set v = item.prefill %}
+      <div class="row">
+        {% if s.kind == 'shipment_milestone' %}
+          <label class="f"><span>Milestone</span><select name="milestone">
+            {% for m in item.milestones %}<option{% if m == v.milestone %} selected{% endif %}>{{ m }}</option>{% endfor %}</select></label>
+        {% else %}
+          <label class="f grow"><span>{{ t.note_only if s.kind == 'shipment_note' else 'Issue' }}</span><input name="milestone" value="{{ v.milestone }}" required></label>
+        {% endif %}
+        <label class="f"><span>{{ t.date }}</span><input type="date" name="date" value="{{ v.date }}" required></label>
+        <label class="f"><span>Time</span><input type="time" name="time" value="{{ v.time }}"></label>
+        {% if s.kind == 'shipment_milestone' and not s.shipment_id %}
+          <label class="f"><span>Planned</span><input type="checkbox" name="planned" value="1"{% if v.planned %} checked{% endif %}></label>
+        {% endif %}
+      </div>
+      <div class="row"><label class="f grow"><span>{{ t.note }}</span><input name="note" value="{{ v.note }}"></label></div>
+    {% endif %}
+    <div class="foot"><button class="button primary" type="submit">{{ t.save }}</button>
+      <button type="button" class="button" data-sg-cancel>{{ t.cancel }}</button></div>
+  </form>
+{% endmacro %}
+
+{% macro suggestion_block(items, gone, back) %}
+  {% if items or gone %}
+  <div class="suggested" id="suggested">
+    {% if items %}
+    <h3>{{ t.suggested_updates }} <span class="pill">{{ items|length }}</span></h3>
+    <table class="grid tight suggestions sg">
+      <thead><tr><th class="c-what">{{ t.col_suggestion }}</th><th>{{ t.col_evidence }}</th><th class="c-acts">{{ t.col_actions }}</th></tr></thead>
+      <tbody>
+        {% for item in items %}{% set s = item.row %}
+        <tr class="suggestion kind-{{ s.kind }}" id="sg-{{ s.id }}">
+          <td>{{ what(s, item) }}
+            <div class="muted small sub">{{ s.proposed_date|day if s.proposed_date else '?' }} &middot; {{ s.confidence }} &middot; {{ s.source }}</div>
+            {% if item.plan and item.plan.already %}<div class="warnline">{{ item.plan.already }}</div>{% endif %}
+            {% if item.same_mail %}<div class="warnline sg-same">Same mail as the timeline note of {{ item.same_mail.at|day }}</div>{% endif %}
+            {% if s.note and s.kind not in ('note', 'tag', 'edit') and not item.plan %}<div class="muted small">{{ s.note }}</div>{% endif %}</td>
+          <td class="evidence">
+            {% if item.site %}{{ site_evidence(s, item.site) }}{% else %}
+            {% if s.evidence_quote %}<span class="quoted" title="{{ s.evidence_quote }}">&ldquo;{{ s.evidence_quote|hide_mid }}&rdquo;</span>{% endif %}
+            <div class="muted small">{{ s.evidence_sender }} &middot; {{ s.evidence_date }}</div>
+            {% endif %}
+          </td>
+          <td class="acts">
+            {% if s.kind == 'case_number' %}
+              {% for opp in (s.named_cases or s.opp_no).split(',') %}
+              <form method="post" action="{{ url_for('suggestion_accept', suggestion_id=s.id) }}" class="row-actions">
+                <input type="hidden" name="next" value="{{ back }}"><input type="hidden" name="case" value="{{ opp }}">
+                <button class="button primary" type="submit">Attach to {{ opp }}</button>
+              </form>
+              {% endfor %}
+              <form method="post" action="{{ url_for('suggestion_dismiss', suggestion_id=s.id) }}" class="row-actions">
+                <input type="hidden" name="next" value="{{ back }}">
+                <button class="button" type="submit">Ignore</button>
+              </form>
+            {% elif item.plan %}
+              {# SG1: each way of recording it is a button, the one Accept
+                 would write marked; Lost... and Cancelled... open their
+                 reason list in place; Edit is for another date or text #}
+              <form method="post" action="{{ url_for('suggestion_record', suggestion_id=s.id) }}" class="row-actions sg-record">
+                <input type="hidden" name="next" value="{{ back }}">
+                {% for value, label, mine in item.options %}
+                  {% if value in ('lost', 'cancelled') %}{% set box = 'sg-' ~ s.id ~ '-' ~ value %}
+                    <button class="button{% if mine %} primary{% endif %}" type="button" data-toggle="{{ box }}"{% if mine %} title="suggested"{% endif %}>{{ t.lost_dots if value == 'lost' else t.cancelled_dots }}</button>
+                    <span class="sg-reason" id="{{ box }}" hidden>
+                      <select name="reason_{{ value }}" aria-label="Reason">
+                        <option value="">{{ t.reason_if_closed }}</option>
+                        {% for reason in (closed_reasons_lost if value == 'lost' else closed_reasons_cancelled) %}
+                          <option value="{{ reason }}"{% if mine and reason == item.plan.reason %} selected{% endif %}>{{ reason }}</option>
+                        {% endfor %}
+                      </select>
+                      <button class="button" type="submit" name="record_as" value="{{ value }}">{{ t.confirm }}</button>
+                    </span>
+                  {% else %}
+                    <button class="button{% if mine %} primary{% endif %}" type="submit" name="record_as" value="{{ value }}"{% if mine %} title="suggested"{% endif %}>{{ 'Note' if value == 'note' else label }}</button>
+                  {% endif %}
+                {% endfor %}
+              </form>
+              <form method="post" action="{{ url_for('suggestion_dismiss', suggestion_id=s.id) }}" class="row-actions">
+                <input type="hidden" name="next" value="{{ back }}">
+                <button class="button" type="submit">{{ t.dismiss }}</button>
+              </form>
+              <button type="button" class="link tiny" data-sg-edit="{{ s.id }}">Edit</button>
+            {% else %}
+              <form method="post" action="{{ url_for('suggestion_accept', suggestion_id=s.id) }}" class="row-actions">
+                <input type="hidden" name="next" value="{{ back }}">
+                <button class="button primary" type="submit">{{ t.accept }}</button>
+              </form>
+              {% if item.editable %}<button type="button" class="button" data-sg-edit="{{ s.id }}">Edit</button>{% endif %}
+              <form method="post" action="{{ url_for('suggestion_dismiss', suggestion_id=s.id) }}" class="row-actions">
+                <input type="hidden" name="next" value="{{ back }}">
+                <button class="button" type="submit">{{ t.dismiss }}</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% if item.editable %}
+        <tr class="s-edit" id="sg-edit-{{ s.id }}" hidden><td colspan="3">{{ edit_form(item, back) }}</td></tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% if gone %}
+    <details class="dismissed">
+      <summary>show {{ gone|length }} dismissed</summary>
+      {% for s in gone %}
+        <div class="d-row">
+          {% if s.kind in ('status', 'note') %}<span class="pill s-{{ (s.proposed_status or 'note')|lower }}">{{ s.proposed_status or t.note }}</span>
+          {% else %}{{ what(s, {'plan': none}) }}{% endif %}
+          <span>{{ s.proposed_date|day if s.proposed_date else '?' }}</span>
+          {# SG1: dismissed by the morning run, nobody decided it in time #}
+          {% if '"expired": true' in (s.decided_values or '') %}<span class="pill tone-grey d-expired">expired</span>{% endif %}
+          {# FX7: closed because a follow-up was logged by hand or on the team site that day #}
+          {% if s|closed_why %}<span class="pill tone-grey d-closed">{{ s|closed_why }}</span>{% endif %}
+          {% if s.evidence_quote %}<span class="d-q">&ldquo;{{ s.evidence_quote|hide_mid }}&rdquo;</span>{% endif %}
+          <form method="post" action="{{ url_for('suggestion_put_back', suggestion_id=s.id) }}" class="inline-form">
+            <input type="hidden" name="next" value="{{ back }}">
+            <button class="link tiny" type="submit">Put back</button>
+          </form>
+        </div>
+      {% endfor %}
+    </details>
+    {% endif %}
+  </div>
+  {% endif %}
+{% endmacro %}

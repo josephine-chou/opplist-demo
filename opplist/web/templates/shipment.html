@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}{{ ship.title }}{% endblock %}
+{% block main_class %}case-page{% endblock %}
+{% block content %}
+{# The shipment page (2026-09-25): the sample's layout under the
+   case page's styles. Every fact on it came from a mail or from her; the
+   route line is text, the map comes in 5c. Forms sit in their own
+   elements, never inside one another. #}
+{% set s = ship %}
+<div class="crumbs"><a href="{{ url_for('shipments_page') }}">{{ t.crumb_shipments }}</a> &rsaquo; <b>{{ s.title }}</b></div>
+
+<div class="card head ship-head" id="head">
+  <h1>{{ s.title }}
+    {% for text, cls in state.pills %}<span class="pill {{ cls }}">{{ text }}</span>{% endfor %}
+    {% if s.closed %}<span class="pill muted-pill">closed</span>{% endif %}
+  </h1>
+  <div class="sub">
+    {% if case %}Won <b>{{ (case.closed_on or case.closed_on_any)|day }}</b>
+      &middot; requester <a href="{{ url_for('party', party_id=case.requester_party_id) }}"><b>{{ case.requester_key }}</b></a>{% if case.requester_country %} ({{ case.requester_country }}){% endif %}
+      {% if case.commodity %}&middot; {{ case.commodity }}{% endif %}
+      &middot; <a href="{{ url_for('enquiry', enquiry_id=case.id) }}" class="mono">{{ case.opp_no }}</a>{% endif %}
+    &middot; <button type="button" class="link tiny" data-toggle="ship-edit">{{ t.ship_edit }}</button>
+  </div>
+  <div class="headgrid">
+    <div>
+      <div class="addr">
+        <div><div class="lab">Shipper</div><div class="who">{{ s.shipper_name or '-' }}</div><div class="where">{{ s.shipper_address or '' }}</div></div>
+        <div class="carrier"><span class="arrow">&rarr;</span><b>{{ s.carrier or '-' }}</b>{{ s.carrier_detail or '' }}</div>
+        <div class="right"><div class="lab">Consignee</div><div class="who">{{ s.consignee_name or '-' }}</div><div class="where">{{ s.consignee_address or '' }}</div></div>
+      </div>
+      <div class="stepper">
+        {% for name, rung, sub in stepper %}
+          {% if not loop.first %}<div class="sbar {{ 'on' if rung != 'todo' else '' }}"></div>{% endif %}
+          <div class="step {{ rung }}"><div class="dot"></div><div class="s-label">{{ name }}</div><div class="s-sub">{{ sub }}</div></div>
+        {% endfor %}
+      </div>
+    </div>
+    <div>
+      <div class="facts">
+        {% for label, value, small in facts %}
+        <div class="fact"><div class="f-l">{{ label }}</div><div class="f-v">{{ value }} {% if small %}<small>{{ small }}</small>{% endif %}</div></div>
+        {% endfor %}
+      </div>
+      {% for issue in state.open_issues %}
+        <div class="alert"><b>{{ issue.title }}.</b> {{ issue.detail or '' }} <span class="muted">{{ t.ship_open_since }} {{ issue.at }}</span></div>
+      {% endfor %}
+      <div class="ship-actions">
+        {# 5b: reads the mail selected in Outlook, runs the detection, and
+           puts the proposal in the status card for Accept / Dismiss #}
+        <form method="post" class="inline-form" action="{{ url_for('shipment_update_from_outlook', shipment_id=s.id) }}">
+          <button class="button primary" type="submit" title="{{ t.ship_update_outlook_hint }}">{{ t.ship_update_outlook }}</button>
+        </form>
+        <button class="button" type="button" data-toggle="form-milestone">{{ t.ship_log_milestone }}</button>
+        <button class="button" type="button" data-toggle="form-issue">{{ t.ship_log_issue }}</button>
+        <button class="button" type="button" data-toggle="form-note">{{ t.ship_add_note }}</button>
+        <form method="post" class="inline-form close-form" action="{{ url_for('shipment_close', shipment_id=s.id) }}">
+          {% if s.closed %}<span class="muted small">{{ t.ship_closed_as.format(r=s.closed_reason or '-') }}</span>
+            <button class="link" name="action" value="reopen" type="submit">{{ t.ship_reopen }}</button>
+          {% else %}
+            <select name="reason" aria-label="{{ t.ship_close_reason }}">
+              {% for r in close_reasons %}<option value="{{ r }}" {% if r == 'Delivered' and not state.delivered %}disabled{% endif %}>{{ r }}</option>{% endfor %}
+            </select>
+            <button class="link" name="action" value="close" type="submit">{{ t.ship_close }}</button>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# the three logging forms, folded until a button opens them #}
+  {% set pf = prefill or {} %}
+  {% macro mail_source(pf) %}
+    {% if pf.message_id %}
+      <input type="hidden" name="source" value="mail">
+      <input type="hidden" name="message_id" value="{{ pf.message_id }}">
+      <input type="hidden" name="sender" value="{{ pf.sender }}">
+      <p class="muted small">{{ t.ship_from_mail.format(who=pf.sender, when=pf.when) }}{% if pf.quote %} &middot; &ldquo;{{ pf.quote }}&rdquo;{% endif %}{% if pf.confidence %} &middot; {{ pf.confidence }}{% endif %}</p>
+    {% endif %}
+  {% endmacro %}
+  <form method="post" class="ship-form" id="form-milestone" {% if pf.kind != 'milestone' %}hidden{% endif %} action="{{ url_for('shipment_milestone', shipment_id=s.id) }}">
+    {{ mail_source(pf if pf.kind == 'milestone' else {}) }}
+    <div class="form-grid">
+      <label class="f"><span>Milestone</span>
+        <select name="milestone" required>
+          {% for m in milestones %}<option value="{{ m }}" {% if pf.kind == 'milestone' and pf.milestone %}{% if m == pf.milestone %}selected{% endif %}{% elif state.current and loop.index0 == state.current_index + 1 %}selected{% endif %}>{{ m }}</option>{% endfor %}
+        </select></label>
+      <label class="f"><span>When</span><input type="datetime-local" name="at" value="{{ pf.at if pf.kind == 'milestone' and pf.at else now }}" required></label>
+      <label class="f"><span>New ETA (optional)</span><input type="date" name="eta" value="{{ pf.eta if pf.kind == 'milestone' and pf.eta else '' }}"></label>
+      <label class="f wide"><span>Detail</span><input name="detail" placeholder="what the mail said" value="{{ pf.detail if pf.kind == 'milestone' else '' }}"></label>
+    </div>
+    <p><button class="button primary" type="submit">{{ t.ship_log_milestone }}</button></p>
+  </form>
+  <form method="post" class="ship-form" id="form-issue" {% if pf.kind != 'issue' %}hidden{% endif %} action="{{ url_for('shipment_issue', shipment_id=s.id) }}">
+    {{ mail_source(pf if pf.kind == 'issue' else {}) }}
+    <div class="form-grid">
+      <label class="f"><span>Issue</span><input name="title" placeholder="Pickup at risk" required value="{{ pf.title if pf.kind == 'issue' else '' }}"></label>
+      <label class="f"><span>When</span><input type="datetime-local" name="at" value="{{ pf.at if pf.kind == 'issue' and pf.at else now }}" required></label>
+      <label class="f"><span>New ETA (optional)</span><input type="date" name="eta" value="{{ pf.eta if pf.kind == 'issue' and pf.eta else '' }}"></label>
+      <label class="f wide"><span>Detail</span><input name="detail" value="{{ pf.detail if pf.kind == 'issue' else '' }}"></label>
+    </div>
+    <p><button class="button primary" type="submit">{{ t.ship_log_issue }}</button></p>
+  </form>
+  <form method="post" class="ship-form" id="form-note" hidden action="{{ url_for('shipment_note', shipment_id=s.id) }}">
+    <div class="form-grid">
+      <label class="f"><span>Title</span><input name="title" placeholder="ETA requested"></label>
+      <label class="f"><span>When</span><input type="datetime-local" name="at" value="{{ now }}" required></label>
+      <label class="f wide"><span>Detail</span><input name="detail"></label>
+    </div>
+    <p><button class="button primary" type="submit">{{ t.ship_add_note }}</button></p>
+  </form>
+  <form method="post" class="ship-form" id="ship-edit" hidden action="{{ url_for('shipment_edit', shipment_id=s.id) }}">
+    <div class="form-grid">
+      {% for field in detail_fields %}
+        <label class="f {{ 'wide' if field in ('remarks',) else '' }}"><span>{{ field|replace('_', ' ') }}</span>
+          {% if field == 'remarks' %}<textarea name="remarks" rows="2">{{ s.remarks or '' }}</textarea>
+          {% elif field.startswith('planned_') or field == 'eta' %}<input type="date" name="{{ field }}" value="{{ s[field] or '' }}">
+          {% else %}<input name="{{ field }}" value="{{ s[field] or '' }}">{% endif %}
+        </label>
+      {% endfor %}
+    </div>
+    <p><button class="button primary" type="submit">{{ t.save }}</button></p>
+  </form>
+</div>
+
+<div class="ship-layout">
+  <div class="stack">
+    <section class="card" id="route">
+      <h2>{{ t.ship_route }} <small>{{ t.ship_route_hint }}</small></h2>
+      {# 5c: the world map (ocean / air) or the US map (a truck inside the
+         USA), the route through the via points, the marker on the last
+         confirmed milestone; a point without coordinates drops the card to
+         the route strip and names the location to fix #}
+      {% if route %}
+        {{ route.svg|safe }}
+        {% if route.missing %}
+          <p class="mapnote">{{ t.ship_map_missing }}
+            {% for m in route.missing %}{% if m.location_id %}<a href="{{ url_for('location', location_id=m.location_id) }}">{{ m.name }}</a>{% else %}<b>{{ m.text }}</b> ({{ t.ship_map_not_in_locations }}){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}.
+          </p>
+        {% endif %}
+      {% endif %}
+      <p class="mapnote">{{ s.remarks or (s.title ~ ' by ' ~ mode_label|lower) }}{% if s.via_points %} &middot; via {{ s.via_points }}{% endif %}</p>
+    </section>
+    <section class="card" id="references">
+      <h2>{{ t.ship_references }}</h2>
+      {% if references %}
+      <div class="refs">
+        {% for label, value in references %}<div class="ref"><span class="ref-l">{{ label }}</span><span class="ref-v">{{ value }}</span></div>{% endfor %}
+      </div>
+      {% if links %}
+        {# 5c: the carrier's own tracking page; the app never fetches it #}
+        <p class="track-links">{% for label, url, field in links %}<a class="button small-button" href="{{ url }}" target="_blank" rel="noopener">{{ label }}</a> {% endfor %}</p>
+      {% endif %}
+      {% else %}<p class="muted">No reference yet - Edit fills them in.</p>{% endif %}
+    </section>
+    <section class="card" id="parties">
+      <h2>{{ t.ship_parties }}</h2>
+      <div class="parties">
+        <div><div class="k">Requester</div>{% if case %}{{ case.requester_key }}{% if case.requester_type %}, {{ case.requester_type|lower }}{% endif %}{% else %}-{% endif %}</div>
+        <div><div class="k">Shipper</div>{{ s.shipper_name or '-' }}{% if s.shipper_address %}, {{ s.shipper_address }}{% endif %}</div>
+        <div><div class="k">Consignee</div>{{ s.consignee_name or '-' }}{% if s.consignee_address %}, {{ s.consignee_address }}{% endif %}</div>
+        <div><div class="k">{{ 'Trucker' if state.mode in ('truck', 'cross_border_truck') else 'Carrier' }}</div>{{ s.carrier or '-' }}{% if s.carrier_detail %}, {{ s.carrier_detail }}{% endif %}</div>
+        <div><div class="k">Price</div>{{ s.price_note or '-' }}</div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card" id="events">
+    {% set total = shown|length + folded|length %}
+    <h2>{{ t.ship_status }} <small>{% if total %}{{ t.ship_status_hint.format(n=shown|length, total=total) }}{% endif %}</small></h2>
+    {# 5b: what the mail proposes, waiting for a yes or a no; E1: Edit, and the dismissed ones #}
+    {% from "_suggestions.html" import suggestion_block with context %}
+    {% if sugg_items %}<p class="muted small">{{ t.ship_suggested_lead }}</p>{% endif %}
+    {{ suggestion_block(sugg_items, sugg_dismissed, url_for('shipment_page', shipment_id=s.id)) }}
+    {% macro event(e) %}
+      <li class="ev {{ e.kind }} {{ 'voided' if e.voided else '' }}"><span class="ev-dot"></span>
+        <div class="ev-body">
+          <div class="ev-head"><span class="ev-title">{{ e.title }}</span><span class="ev-when">{{ e.at }}</span></div>
+          {% if e.detail %}<div class="ev-detail">{{ e.detail }}</div>{% endif %}
+          <div class="ev-src">
+            <span class="pill muted-pill src">{{ e.source }}{% if e.sender %} &middot; {{ e.sender }}{% endif %}</span>{% if e.id in (edited_events or ()) %} <span class="pill tone-amber src edited">edited</span>{% endif %}
+            {% if e.eta %}<span>ETA {{ e.eta|day }}</span>{% endif %}
+            {% if e.kind == 'issue' and not e.voided %}
+              {% if e.id in resolved %}<span class="muted">{{ t.ship_resolved }}</span>
+              {% else %}<form method="post" class="resolve-form" action="{{ url_for('shipment_event', shipment_id=s.id, event_id=e.id) }}">
+                <button class="link tiny" name="action" value="resolve" type="submit">{{ t.ship_resolve }}</button></form>{% endif %}
+            {% endif %}
+            <form method="post" class="void-form" action="{{ url_for('shipment_event', shipment_id=s.id, event_id=e.id) }}">
+              {% if e.voided %}<span class="pill muted-pill">{{ t.voided }}</span> <button class="link tiny" name="action" value="unvoid" type="submit">{{ t.unvoid }}</button>
+              {% else %}<button class="link tiny" name="action" value="void" type="submit">{{ t.void }}</button>{% endif %}
+            </form>
+          </div>
+        </div>
+      </li>
+    {% endmacro %}
+    {% if total %}
+      <ol class="events">{% for e in shown %}{{ event(e) }}{% endfor %}</ol>
+      {% if folded %}
+        <details class="older"><summary>{{ t.ship_earlier.format(n=folded|length) }}</summary>
+          <ol class="events">{% for e in folded %}{{ event(e) }}{% endfor %}</ol>
+        </details>
+      {% endif %}
+    {% else %}<p class="muted">{{ t.ship_no_events }}</p>{% endif %}
+  </section>
+</div>
+
+{# 5b: the same Mail card as the case page, on the case's threads, with
+   'Log as milestone' / 'Log as issue' in the reading pane #}
+{% set enquiry_id = s.enquiry_id %}
+{% set shipment = s %}
+{% set mail_back = url_for('shipment_page', shipment_id=s.id, mail='all') %}
+<div class="stack" style="margin-top: 14px">
+  {% include "_mail_card.html" %}
+</div>
+{% endblock %}

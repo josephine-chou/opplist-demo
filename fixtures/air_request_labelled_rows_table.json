@@ -1,0 +1,23 @@
+{
+ "note": "Invented sample: KT Shen's reply to an air import request Chennai (MAA) to Phoenix (PHX) written as a table, one label per row, each value on the next line as Outlook renders table cells. One item: 48 cartons 40 x 35.5 x 42 cm, gross 365.65 kg, volume 2.863 cbm stated, the sender's chargeable 477.15 kg on volumetric. Gross and chargeable must not be summed and the Dimensions row must not open a second item.",
+ "subject": "RE: Air import quote needed - Chennai (MAA) to Phoenix (PHX) - 477.15 kg chargeable - Ref DEMO-MAA-PHX",
+ "sender_name": "JJC-KT SHEN",
+ "sender_address": "KtShen@jojofreight.example",
+ "sender_internal": true,
+ "received_on": "2026-09-23",
+ "received_at": "2026-09-23 12:08:31",
+ "to_addresses": [
+  "pricing@coromandel-air.example",
+  "DerekChan@jojofreight.example"
+ ],
+ "cc_addresses": [
+  "VictorLang@jojofreight.example",
+  "JJC-MFN@jojofreight.example"
+ ],
+ "display_to": "Anjali - Coromandel Air [Rates]; JJC-DEREK CHAN; JJC-VICTOR LANG; #JJC-MFN",
+ "conversation_id": "CONV-DEMO-MAA-PHX",
+ "entry_id": "ENTRY-DEMO-MAA-PHX-0923",
+ "message_id": "<maa-phx-table-0923@jojofreight.example>",
+ "attachment_names": [],
+ "body": "Dear Anjali:\r\n\r\nNoted with thanks, our air desk is preparing the DDU offer for you.\r\n\r\nKT Shen\r\nJoJo Freight\r\n\r\nFrom: Anjali - Coromandel Air [Rates] <pricing@coromandel-air.example>\r\nSent: Wednesday, September 23, 2026 11:52 AM\r\nTo: JJC-DEREK CHAN <DerekChan@jojofreight.example>\r\nCc: JJC-KT SHEN <KtShen@jojofreight.example>\r\nSubject: Air import quote needed - Chennai (MAA) to Phoenix (PHX) - 477.15 kg chargeable - Ref DEMO-MAA-PHX\r\n\r\nHello,\r\n\r\nWe would like an all-in offer for the air import set out in the table.\r\n\r\nReference\r\n\r\nDEMO-MAA-PHX\r\n\r\nRouting\r\n\r\nAir from Chennai (MAA), India - door delivery, Flagstaff, AZ 86001, USA\r\n\r\nTerms\r\n\r\nDDU - import duties for the receiver\r\n\r\nCommodity\r\n\r\nBrass table lamps without bulbs, boxed. General cargo, no lithium, not dangerous. 480 gift boxes in 48 cartons\r\n\r\nGross weight\r\n\r\n365.65 kg\r\n\r\nVolume\r\n\r\n2.863 cbm\r\n\r\nDimensions\r\n\r\n40 x 35.5 x 42 cm x 48 cartons\r\n\r\nChargeable weight\r\n\r\n477.15 kg on volumetric\r\n\r\nCargo ready\r\n\r\nEarly October, date to follow\r\n\r\nWe need the airfreight, the destination handling and the truck to Flagstaff shown separately, and the transit time.\r\n\r\nAnjali\r\nCoromandel Air (demo)\r\n"
+}

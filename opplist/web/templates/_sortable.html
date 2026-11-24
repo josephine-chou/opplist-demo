@@ -1,0 +1,9 @@
+{# A sortable column heading: click to sort, click again to reverse. #}
+{% macro sortable(column, label, sort, dir, args=None) %}
+  {% set next_dir = 'asc' if (sort == column and dir == 'desc') else 'desc' %}
+  {% set params = dict((args or {}), sort=column, dir=next_dir) %}
+  <th class="{{ 'sorted' if sort == column else '' }}">
+    <a href="{{ url_for(request.endpoint, **params) }}">{{ label }}{% if sort == column %}
+      <span class="arrow">{{ '\u25bc' if dir == 'desc' else '\u25b2' }}</span>{% endif %}</a>
+  </th>
+{% endmacro %}

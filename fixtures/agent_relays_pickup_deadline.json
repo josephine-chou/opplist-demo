@@ -1,0 +1,20 @@
+{
+  "note": "Invented sample: the agent passes on the consignee's deadline for collecting the cargo. A plan with a day word, not a pickup - detect() proposes nothing, or a note when the sentence carries a date.",
+  "subject": "RE: AIR QUOTE // ATL - GRU // PUMP SPARES",
+  "sender_name": "Paula Moreira",
+  "sender_address": "paula@partner-cargo.example",
+  "sender_internal": false,
+  "received_on": "2026-09-03",
+  "received_at": "2026-09-03 11:25",
+  "to_addresses": [
+    "VictorLang@jojofreight.example"
+  ],
+  "cc_addresses": [
+    "IrisChen@jojofreight.example"
+  ],
+  "display_to": "JJC-VICTOR LANG",
+  "conversation_id": "CONV-PICKUP-DEADLINE",
+  "entry_id": "ENTRY-PICKUP-0903",
+  "message_id": "<pickup-deadline-0903@partner-cargo.example>",
+  "body": "Hi Victor,\r\n\r\nOur consignee says the crates have to be picked up by Thursday at the latest, the plant shuts its dock at 3 pm.\r\n\r\nCan you line up a truck?\r\n\r\nBest,\r\nPaula\r\n"
+}

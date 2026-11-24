@@ -1,0 +1,25 @@
+{
+ "note": "Invented: Victor asks a partner (one company, two domains: kdr-usa and kdrflorida) whether they can take on a service, over the partner's own introduction mail quoted below - an introduction, not an enquiry. The final destination is named in a sentence of its own.",
+ "subject": "RE: Warehouse support in the Southeast",
+ "sender_name": "JJC-VICTOR LANG",
+ "sender_address": "VictorLang@jojofreight.example",
+ "sender_internal": true,
+ "received_on": "2026-09-16",
+ "received_at": "2026-09-16 14:40",
+ "to_addresses": [
+  "lpardo@kdr-usa.example",
+  "nquist@kdrflorida.example",
+  "owen@kdr-usa.example"
+ ],
+ "cc_addresses": [
+  "EricLo@jojofreight.example",
+  "IrisChen@jojofreight.example"
+ ],
+ "display_to": "Lena Pardo; Nils Quist; Owen Marsh; JJC-ERIC LO; JJC-IRIS CHEN",
+ "conversation_id": "CONV-DEMO-INTRO",
+ "entry_id": "ENTRY-DEMO-INTRO-2",
+ "attachment_names": [
+  "Coating agent B7 - safety data sheet.pdf"
+ ],
+ "body": "Hi Lena, Nils and Owen,\r\n\r\nA question for your warehouse team:\r\n\r\nWe have dangerous goods to collect near Boise, ID. They would go to your Miami site to be checked, marked and documented, then loaded into 3 x 40' high cubes.\r\n\r\nCould you handle that for us? The safety data sheet is attached.\r\n\r\nShould you need it, the final destination is Santos, Brazil.\r\n\r\nBest Regards,\r\n\r\nVictor Lang\r\nJoJo Freight (Chicago)\r\n\r\nFrom: Lena Pardo <lpardo@kdr-usa.example>\r\nSent: Monday, August 3, 2026 9:15 AM\r\nTo: JJC-VICTOR LANG <VictorLang@jojofreight.example>\r\nCc: Nils Quist <nquist@kdrflorida.example>; Owen Marsh <owen@kdr-usa.example>\r\nSubject: Warehouse support in the Southeast\r\n\r\nHello Victor,\r\n\r\nNils and I spent last week comparing notes on the accounts we share with JoJo, and your name came up more than once.\r\n\r\nOur Miami and Savannah warehouses have room this autumn, and we are curious what your team moves through the Southeast.\r\n\r\nNo rush on this - just keep us in mind.\r\n\r\nLena\r\n"
+}

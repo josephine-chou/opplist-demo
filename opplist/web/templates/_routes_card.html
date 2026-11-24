@@ -1,0 +1,97 @@
+{# The Routes card (schema v33; 15a): one row per live route -
+   its letter, from and to with the delivery address under it, the service
+   scope, mode and incoterm, the port of discharge, the result, and Start
+   shipment on a won route (its shipment once there is one). Each route is
+   a unit: Edit opens its editor under the row, with Save and Cancel, and
+   the editor posts only that route. '+ Add route' opens a new route's
+   editor, route A's origin copied in. Struck-out routes are put back from
+   More. Batch 23: the place pickers (Dest. location and Port of
+   discharge take up to four places, read with 'or'); the page's place list
+   is #place-data, read by app.js. #}
+{% from "_route_panels.html" import route_panels, pod_picker with context %}
+{% set lr = live_routes if live_routes is defined else [] %}
+{% macro route_editor(re, idp, title) %}
+  <form method="post" class="u-form route-form" id="{{ idp }}form" novalidate action="{{ url_for('enquiry_routes', enquiry_id=enquiry_id) }}">
+    <input type="hidden" name="form" value="route"><input type="hidden" name="route_id" value="{{ re.id or '' }}">
+    <h3>{{ title }}</h3>
+    {{ route_panels(re, '', {}, forms.field_state(re.get('service_mode'), re.get('incoterm'), re.get('service_scope')), {}, {}, {}, idp) }}
+    <div class="form-grid four route-extra">
+      <label class="f"><span>Service</span>
+        <select name="service_scope"><option value="">-</option>
+          {% for sc in service_scopes %}<option value="{{ sc }}" {% if re.get('service_scope') == sc %}selected{% endif %}>{{ sc }}</option>{% endfor %}
+        </select></label>
+      <label class="f"><span>Service mode</span>
+        <select name="service_mode" id="{{ idp }}service_mode"><option value="">-</option>
+          {% for m in forms.SERVICE_MODES %}<option value="{{ m }}" {% if re.get('service_mode') == m %}selected{% endif %}>{{ m }}</option>{% endfor %}
+        </select></label>
+      <label class="f"><span>Incoterm</span>
+        <select name="incoterm" id="{{ idp }}incoterm"><option value="">-</option>
+          {% for i in forms.INCOTERMS %}<option value="{{ i }}" {% if re.get('incoterm') == i %}selected{% endif %}>{{ i }}</option>{% endfor %}
+        </select></label>
+      {{ pod_picker(re, '', idp) }}
+      <label class="f"><span>Result</span>
+        <select name="result"><option value="">{{ t.no_result }}</option>
+          {% for res in ['Won', 'Lost', 'Cancelled'] %}<option value="{{ res }}" {% if re.get('result') == res %}selected{% endif %}>{{ res }}</option>{% endfor %}
+        </select></label>
+      <label class="f"><span>Reason</span>
+        <select name="lost_reason"><option value="">-</option>
+          <optgroup label="Lost">{% for rsn in closed_reasons_lost %}<option value="{{ rsn }}" {% if re.get('result') != 'Cancelled' and re.get('lost_reason') == rsn %}selected{% endif %}>{{ rsn }}</option>{% endfor %}</optgroup>
+          <optgroup label="Cancelled">{% for rsn in closed_reasons_cancelled %}<option value="{{ rsn }}" {% if re.get('result') == 'Cancelled' and re.get('lost_reason') == rsn %}selected{% endif %}>{{ rsn }}</option>{% endfor %}</optgroup>
+        </select></label>
+      <label class="f wide"><span>{{ t.note }}</span><input name="notes" value="{{ re.get('notes') or '' }}"></label>
+    </div>
+    <div class="foot"><button class="button primary" type="submit">{{ t.save_route }}</button>
+      <button type="button" class="button" data-cancel>{{ t.cancel }}</button></div>
+  </form>
+{% endmacro %}
+<section class="card sec-card" id="routes">
+<script type="application/json" id="place-data">{{ (place_data or {})|tojson }}</script>
+<div class="card-head"><h2>{{ t.sec_routes }}</h2>
+  {% if lr %}<button type="button" class="button small-button add-route" data-open-unit="route-new">{{ t.add_route }}</button>{% endif %}</div>
+<table class="tbl routes">
+  <thead><tr><th></th><th>Route</th><th>Service</th><th>Port of discharge</th><th>Result</th><th></th></tr></thead>
+  {% for r in lr %}
+  <tbody class="unit r-unit" data-unit="route-{{ r.id }}" data-unit-name="Route {{ r.letter }}">
+    <tr class="r-row" id="route-row-{{ r.id }}">
+      <td class="letter">{{ r.letter }}</td>
+      <td>{{ r.from }}{% if r.origin_country and r.from != r.origin_country %}, {{ r.origin_country }}{% endif %} to {% if r.dest_titles|length > 1 %}{% for d in r.dest_titles %}{% if not loop.first %} <span class="r-or">or</span> {% endif %}<b>{{ d }}</b>{% endfor %}{% else %}<b>{{ r.to }}</b>{% endif %}{% if r.dest_country and r.to != r.dest_country %}, {{ r.dest_country }}{% endif %}
+        {% if r.dest_alt %}<span class="small">{{ r.dest_alt }}</span>{% endif %}
+        {% if r.origin_alt %}<span class="small">pickup: {{ r.origin_alt }}</span>{% endif %}</td>
+      <td>{% if r.service_scope %}<span class="pill muted-pill">{{ r.service_scope }}</span>{% endif %}
+        <span class="small">{{ r.service_mode or '-' }}{% if r.incoterm %} &middot; {{ r.incoterm }}{% endif %}</span></td>
+      <td>{{ r.pod_text or '' }}</td>
+      <td>{% if r.result %}<span class="pill s-{{ r.result|lower }}">{{ r.result }}</span>{% if r.lost_reason %}<span class="small">{{ r.lost_reason }}</span>{% endif %}{% else %}<span class="muted">-</span>{% endif %}</td>
+      <td class="row-links">
+        {% if r.result == 'Won' and values.get('status') == 'Won' and shipments_on %}
+          {% if route_ships.get(r.id) %}<a class="button small-button" href="{{ url_for('shipment_page', shipment_id=route_ships[r.id]) }}">{{ t.open_shipment }}</a>
+          {% else %}<form method="post" class="inline-form" id="route-ship-{{ r.id }}" data-nav action="{{ url_for('shipment_start', enquiry_id=enquiry_id) }}"><input type="hidden" name="route_id" value="{{ r.id }}"></form><button class="button small-button" type="submit" form="route-ship-{{ r.id }}">{{ t.start_shipment }}</button>{% endif %}
+        {% endif %}
+        <button type="button" class="link u-edit-btn" data-edit>{{ t.edit }}</button>
+        {% if lr|length > 1 %}<form method="post" class="inline-form" action="{{ url_for('enquiry_routes', enquiry_id=enquiry_id) }}"><input type="hidden" name="route_id" value="{{ r.id }}"><input type="hidden" name="action" value="void"><button class="link" type="submit">{{ t.thread_void }}</button></form>{% endif %}
+      </td>
+    </tr>
+    <tr class="r-edit u-edit" hidden><td colspan="6"><div class="route-editor">
+      {{ route_editor(r, 'r' ~ r.id ~ '-', 'Route ' ~ r.letter) }}
+    </div></td></tr>
+  </tbody>
+  {% endfor %}
+  {% if new_route %}
+  <tbody class="unit r-unit r-new" data-unit="route-new" data-unit-name="New route">
+    <tr class="r-edit u-edit" hidden><td colspan="6"><div class="route-editor">
+      {{ route_editor(new_route, 'rnew-', 'Route ' ~ new_route.letter) }}
+    </div></td></tr>
+  </tbody>
+  {% endif %}
+</table>
+{# RG2a (layer 2): she gave a side another place than the reader offered for the mail's words -
+   one click writes the words as a manual alias of hers, so the next mail with them reads it #}
+{% for m in (remember_places or []) %}
+<form method="post" class="inline-form remember-place" action="{{ url_for('enquiry_remember_place', enquiry_id=enquiry_id) }}">
+  <input type="hidden" name="side" value="{{ m.side }}">
+  <button class="link small" type="submit">Remember &lsquo;{{ m.words }}&rsquo; as {{ m.key }}</button>
+  <span class="muted small">{{ 'origin' if m.side == 'origin' else 'destination' }}: the mail&rsquo;s words, read as {{ m.read or 'nothing' }}</span>
+</form>
+{% endfor %}
+{# SC1: a quote-both request is one case with a route per mode; a Multi-mode case with one route says so #}
+{% if lr|length == 1 and (lr[0].service_mode or values.get('service_mode')) == 'Multi-mode' and not values.get('legacy') %}<p class="muted small multi-mode-hint" id="multi-mode-hint">{{ t.multi_mode_hint }}</p>{% endif %}
+</section>

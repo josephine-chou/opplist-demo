@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ t.nav_locations }}{% endblock %}
+{% block content %}
+<h1>{{ t.nav_locations }}{% if rows is not none %} <span class="count">{{ rows|length }}</span>{% endif %}</h1>
+<p class="muted">{{ t.locations_hint }}</p>
+{% if rows is none %}
+  <p class="muted">{{ t.locations_not_active }}</p>
+{% else %}
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ query }}" placeholder="key, name, alias, area">
+  <button class="button" type="submit">{{ t.filter }}</button>
+  <a class="button" href="{{ url_for('locations') }}">{{ t.clear_filters }}</a>
+  <a class="button {{ 'primary' if missing else '' }}" href="{{ url_for('locations', missing=1) }}">{{ t.locations_missing }} <span class="count">{{ missing_count }}</span></a>
+  <a class="button primary" href="{{ url_for('location_new') }}">{{ t.location_new }}</a>
+</form>
+{% if rows %}
+<table class="grid">
+  <thead><tr>
+    <th>Key</th><th>Name</th><th>Type</th><th>Country</th><th>State</th><th>Parent</th><th>Area</th>
+    <th>UN/LOCODE</th><th>IATA</th><th>Lat</th><th>Lon</th><th>Status</th><th>{{ t.location_aliases }}</th><th>{{ t.location_used_by }}</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr onclick="location='{{ url_for('location', location_id=r.id) }}'" class="{% if r.status == 'retired' %}muted{% endif %}">
+      <td><a href="{{ url_for('location', location_id=r.id) }}">{{ r.key }}</a>
+        {% if r.status == 'to_confirm' %}<span class="pill warn">to confirm</span>{% endif %}
+        {% if r.status == 'retired' %}<span class="pill">retired</span>{% endif %}</td>
+      <td>{{ r.name }}</td><td>{{ r.type }}</td><td>{{ r.country }}</td><td>{{ r.subdivision or '' }}</td>
+      <td>{{ r.parent_key or '' }}</td><td>{{ r.area_key or '' }}</td>
+      <td class="mono">{{ r.unlocode or '' }}</td><td class="mono">{{ r.iata or '' }}</td>
+      <td class="mono">{{ '%.2f'|format(r.lat) if r.lat is not none else '' }}</td><td class="mono">{{ '%.2f'|format(r.lon) if r.lon is not none else '' }}</td>
+      <td>{{ r.status }}</td><td class="muted">{{ r.aliases or '' }}</td><td class="mono">{{ r.used }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<p class="muted">No location matches.</p>{% endif %}
+{% endif %}
+{% endblock %}

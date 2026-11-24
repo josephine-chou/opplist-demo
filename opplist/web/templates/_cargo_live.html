@@ -1,0 +1,26 @@
+{# The Cargo card's totals strip and checks (15b): rendered with the page,
+   and again by /cargo/preview while a line editor is open, so they follow
+   what is typed. On the register page (`reg`, 15c) an answer changes the
+   line's inputs in the page and is saved with the case. #}
+{% set reg = reg if reg is defined else false %}
+<div class="cargo-strip{{ ' fcl' if cargo_fcl else '' }}">
+  {% for s in cargo_strip %}
+    <div class="{{ 'key' if s.get('key') else '' }}"><div class="k">{{ s.label }}</div><div class="v">{{ s.value }}</div><div class="fm">{{ s.formula }}</div></div>
+  {% endfor %}
+</div>
+{% if cargo_checks %}
+<div class="checks" id="cargo-checks">
+  {% for c in cargo_checks %}
+    <div class="ck {{ c.kind }}" data-code="{{ c.code }}"{% if c.line_id is not none %} data-line="{{ c.line_id }}"{% endif %}>
+      <span class="ic">{% if c.kind == 'ok' %}&#10003;{% else %}!{% endif %}</span><span class="ck-text">{{ c.text }}</span>
+      {% if c.actions %}<span class="acts">{% for label, action, value in c.actions %}
+        {% if action == 'edit' and reg %}<button type="button" class="button small-button" data-goto-line="{{ c.line_id }}">{{ label }}</button>
+        {% elif action == 'edit' %}<button type="button" class="button small-button" data-open-unit="cargo-line-{{ c.line_id }}">{{ label }}</button>
+        {% elif reg and action != 'use_mail_size' %}<button type="button" class="button small-button" data-answer="{{ action }}" data-line="{{ c.line_id if c.line_id is not none else '' }}" data-value="{{ value }}">{{ label }}</button>
+        {% elif action == 'use_mail_size' %}<button type="button" class="button small-button" data-use-size="{{ c.line_id }}" data-value="{{ value }}">{{ label }}</button>
+        {% else %}<button class="button small-button" type="submit" form="cargo-answer" name="answer" value="{{ action }}|{{ c.line_id if c.line_id is not none else '' }}|{{ value }}">{{ label }}</button>{% endif %}
+      {% endfor %}</span>{% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endif %}

@@ -1,0 +1,23 @@
+{
+ "note": "Invented: Victor's reply to Tolvex (Felipe Arancibia) on a DDP FCL request, the request quoted below. The request ends with a line asking to keep Tomas Ibanez in copy ('... en copia a Tomas Ibanez'), which the lane reader once took for a lane ending at a person and created a location from (SPEC 5.2 person rule).",
+ "subject": "RE: DDP QUOTE NEEDED // FCL // 1X40HC // DRIED APRICOTS",
+ "sender_name": "JJC-VICTOR LANG",
+ "sender_address": "VictorLang@jojofreight.example",
+ "sender_internal": true,
+ "received_on": "2026-09-22",
+ "received_at": "2026-09-22 16:35",
+ "to_addresses": [
+  "felipe.arancibia@tolvex.example",
+  "InesArce@jojofreight.example"
+ ],
+ "cc_addresses": [
+  "renata.vidal@tolvex.example",
+  "tomas.ibanez@tolvex.example",
+  "JJC-MFN@jojofreight.example"
+ ],
+ "display_to": "Felipe Arancibia; JQM-INES ARCE; Renata Vidal; Tomas Ibanez; #JJC-MFN",
+ "conversation_id": "CONV-DEMO-DDP-SAV",
+ "entry_id": "ENTRY-DEMO-DDP-SAV",
+ "attachment_names": [],
+ "body": "Hi Felipe,\r\n\r\nThank you. Our import desk is working on the DDP figures now.\r\n\r\nBest Regards,\r\n\r\nVictor Lang\r\nJoJo Freight (Chicago)\r\n\r\nFrom: Felipe Arancibia <felipe.arancibia@tolvex.example>\r\nSent: Tuesday, September 22, 2026 1:10 PM\r\nTo: JJC-VICTOR LANG <VictorLang@jojofreight.example>; JQM-INES ARCE <InesArce@jojofreight.example>\r\nCc: Renata Vidal <renata.vidal@tolvex.example>; Tomas Ibanez <tomas.ibanez@tolvex.example>\r\nSubject: DDP QUOTE NEEDED // FCL // 1X40HC // DRIED APRICOTS\r\n\r\nHello Victor,\r\n\r\nWe need a DDP price for one 40' high cube of dried apricots, delivered to the buyer's warehouse.\r\n\r\nPlease include the ocean freight, the destination charges, duties, taxes and your own margin in one figure.\r\n\r\nDelivery: Orchard Lane Foods, 75 Magnolia Bend Road, Pooler, GA 31322, USA\r\n\r\n1 x 40HC: 20 pallets, 18,400 kg gross\r\n\r\nHS CODE: 0813.10\r\n\r\nGracias de antemano, y por favor respondan con copia a Tomás Ibáñez – tomas.ibanez@tolvex.example\r\n\r\nRegards,\r\nFelipe"
+}

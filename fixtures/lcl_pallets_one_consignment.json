@@ -1,0 +1,21 @@
+{
+ "note": "Invented sample: one LCL consignment, Busan to Houston DDU - '7 pallets (120x110x90cm)', 'Estimated weight: 3,850kg', ceramic floor tiles HS 6907, delivery Rosenberg, TX. One cargo line: the cbm off the dims, 3850 kg, W/M on the cbm (SPEC 4.3.3).",
+ "subject": "LCL BUSAN TO HOUSTON - DDU TX 77471 USA",
+ "sender_name": "Minji Seo",
+ "sender_address": "minji.seo@hangang-logis.example",
+ "sender_internal": false,
+ "received_on": "2026-09-23",
+ "received_at": "2026-09-23 03:12:40",
+ "to_addresses": [
+  "AvaT@jojofreight.example",
+  "JJC-MFN@jojofreight.example",
+  "EricLo@jojofreight.example"
+ ],
+ "cc_addresses": [],
+ "display_to": "JJC-AVA TRAN; #JJC-MFN; JJC-ERIC LO",
+ "conversation_id": "CONV-DEMO-PUS-HOU",
+ "entry_id": "ENTRY-DEMO-PUS-HOU-0923",
+ "message_id": "<pus-hou-lcl-0923@hangang-logis.example>",
+ "attachment_names": [],
+ "body": "Hello team,\r\n\r\nKindly offer your LCL rate on DDU basis for this one.\r\n\r\nPOL BUSAN\r\n\r\nPOD HOUSTON\r\n\r\nCARGO DETAILS 7 pallets (120x110x90cm)\r\n\r\nEstimated weight: 3,850kg\r\n\r\nCOMMODITY CERAMIC FLOOR TILES\r\n\r\nHS CODE 6907\r\n\r\nDelivery address:\r\n\r\nLONE STAR TILE OUTLET\r\n\r\n4410 CYPRESS BEND ROAD\r\n\r\nROSENBERG, TX 77471, USA\r\n\r\nATTN: WAREHOUSE DESK\r\n\r\nUNITED STATES\r\n\r\nThank you,\r\nMinji Seo\r\nHangang Logistics (demo)\r\n"
+}

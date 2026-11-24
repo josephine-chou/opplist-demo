@@ -1,0 +1,327 @@
+{# The enquiry form body, shared by New enquiry and the case page: three
+   sections - Request, Cargo, Route - each a card on the case page
+   (2026-09-24) and a plain group on the registration page.
+   `state` marks each conditional field required / normal / dim.
+   Quantity fields are greyed, never hidden: hiding recorded data loses it.
+   Every field name is as it was; only the grouping changed. #}
+{% set state = forms.field_state(values.get('service_mode'), values.get('incoterm'), values.get('service_scope')) %}
+{% set labels = forms.labels_for(values.get('service_mode')) %}
+
+{# Where a pre-filled value came from. Only the
+   'Register from Outlook' form has a draft; the case page shows nothing. #}
+{% set hints = draft.sources if draft is defined and draft else {} %}
+{% set kept = inline if inline is defined and inline else {} %}
+{% set quoted = draft.evidence if draft is defined and draft else {} %}
+{% set ctx = case_ctx if case_ctx is defined and case_ctx else none %}
+{% macro whence(name, hints, quoted) %}
+  {%- if hints.get(name) %}
+    <em class="whence">{{ hints[name] }}
+      {%- if quoted.get(name) %} <span class="quoted">&ldquo;{{ quoted[name] }}&rdquo;</span>{% endif %}
+    </em>
+  {%- endif %}
+{% endmacro %}
+
+{% from "_route_panels.html" import route_panels with context %}
+
+<section class="card sec-card" id="request">
+<h2>{{ t.sec_request }}</h2>
+<div class="form-grid four">
+
+  <label class="f required">
+    <span>Received on</span>
+    <input id="fld-received_on" type="date" name="received_on" value="{{ values.get('received_on') or '' }}" required>
+    {{ whence('received_on', hints, quoted) }}
+    {% if errors.received_on %}<em class="err">{{ errors.received_on }}</em>{% endif %}
+  </label>
+
+  <label class="f required">
+    <span>Requester</span>
+    <select name="requester_party_id" id="requester">
+      <option value="">-</option>
+      {% for p in parties %}
+        <option value="{{ p.id }}" data-type="{{ p.type }}"
+          {% if values.get('requester_party_id')|string == p.id|string %}selected{% endif %}>
+          {{ p.key }}{% if p.placeholder %} ({{ t.placeholder_badge }}){% endif %}{% if p.prospect %} (prospect){% endif %}
+        </option>
+      {% endfor %}
+    </select>
+    <em class="note">{% if ctx and values.get('requester_party_id') %}<a href="{{ url_for('party', party_id=values.get('requester_party_id')) }}">Open party</a> &middot; {% endif %}<button type="button" class="link tiny new-party" data-toggle="new-party">{{ t.new_party_link }}</button></em>
+    {{ whence('requester_party_id', hints, quoted) }}
+    {% if errors.requester_party_id %}<em class="err">{{ errors.requester_party_id }}</em>{% endif %}
+  </label>
+
+  {% set suggested = new_party if new_party is defined and new_party else {} %}
+  {% set new_sources = suggested.get('sources', {}) if suggested else {} %}
+  <fieldset class="inline-add" id="new-party" {% if not kept.get('new_party_key') and not suggested %}hidden{% endif %}>
+    <legend>{{ t.new_party }}</legend>
+    {% if suggested.get('similar') %}
+      <p class="similar-parties">{{ t.similar_parties }}:
+        {% for s in suggested.similar %}
+          <button type="button" class="pill link-pill" data-pick-party="{{ s.id }}"
+                  title="{{ s.detail }}">{{ s.key }}</button>
+        {% endfor %}
+      </p>
+    {% endif %}
+    {% if suggested.get('why') and not suggested.get('key') %}<p class="muted">{{ suggested.why }}</p>{% endif %}
+    <label class="f">
+      <span>Name</span>
+      <input name="new_party_key" placeholder="Key, e.g. Tolvex"
+             value="{{ kept.get('new_party_key', '') }}">
+      {% if new_sources.get('key') %}<em class="whence">{{ new_sources.key }}</em>{% endif %}
+    </label>
+    <label class="f">
+      <span>Type</span>
+      <select name="new_party_type">
+        {% for ty in party_types %}
+          <option value="{{ ty }}" {% if kept.get('new_party_type') == ty %}selected{% endif %}>{{ ty }}</option>
+        {% endfor %}
+      </select>
+      {% if new_sources.get('type') %}<em class="whence">{{ new_sources.type }}</em>{% endif %}
+    </label>
+    <label class="f">
+      <span>Country</span>
+      <select name="new_party_country">
+        {% for c in countries %}<option value="{{ c.name }}" {% if kept.get('new_party_country') == c.name %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+      {% if new_sources.get('country') %}<em class="whence">{{ new_sources.country }}</em>{% endif %}
+    </label>
+    {% if kept.get('new_party_domain') or kept.get('new_party_domain_shown') %}
+      <label class="f">
+        <span>Domain</span>
+        <input type="hidden" name="new_party_domain_shown" value="1">
+        <input name="new_party_domain" class="mono" value="{{ kept.get('new_party_domain', '') }}" spellcheck="false" autocomplete="off">
+        {% if new_sources.get('domain') %}<em class="whence">{{ new_sources.domain }}</em>{% endif %}
+        {% if errors is defined and errors.get('new_party_domain') %}<em class="err">{{ errors['new_party_domain'] }}</em>{% endif %}
+      </label>
+    {% endif %}
+  </fieldset>
+
+  {% if new_case %}
+  <label class="f">
+    <span>Status</span>
+    <select name="status">
+      {% for st in forms.OPEN_STATUSES %}
+        <option value="{{ st }}" {% if (values.get('status') or 'New') == st %}selected{% endif %}>{{ st }}</option>
+      {% endfor %}
+    </select>
+    {{ whence('status', hints, quoted) }}
+    {% if values.get('status_at') %}
+      <input type="hidden" name="status_at" value="{{ values.get('status_at') }}">
+      <em class="hint">{{ t.status_dated }} {{ values.get('status_at') }}</em>
+    {% endif %}
+  </label>
+  {% endif %}
+
+  <label class="f">
+    <span>End customer</span>
+    <input name="end_customer" id="end_customer"
+           value="{{ values.get('end_customer') or '' }}"
+           placeholder="Actual shipper / consignee">
+    {{ whence('end_customer', hints, quoted) }}
+  </label>
+
+  {# v31: the office that handles the case; the home office stores nothing #}
+  {% set handled = (values.get('handled_by') or '')|upper %}
+  <label class="f">
+    <span>Handled by</span>
+    <select name="handled_by" id="handled_by">
+      <option value="{{ home_office }}" {% if not handled %}selected{% endif %}>{{ home_office }}</option>
+      {% for code in (office_codes or []) + ([handled] if handled and handled not in (office_codes or []) else []) %}
+        <option value="{{ code }}" {% if handled == code %}selected{% endif %}>{{ code }}</option>
+      {% endfor %}
+    </select>
+    {{ whence('handled_by', hints, quoted) }}
+    {% if errors.handled_by %}<em class="err">{{ errors.handled_by }}</em>{% endif %}
+  </label>
+
+  <label class="f wide">
+    <span>Source subject</span>
+    <input id="fld-source_subject" name="source_subject" class="mono" value="{{ values.get('source_subject') or '' }}">
+  </label>
+
+  {# Remarks belong to the case, not to a route (v33: moved from the Route card) #}
+  <label class="f wide">
+    <span>Remarks</span>
+    <textarea id="fld-remarks" name="remarks" rows="3">{{ values.get('remarks') or '' }}</textarea>
+  </label>
+</div>
+
+{% if ctx %}
+  {# the request's other lanes are listed in the bottom bar's More menu (12b) #}
+
+  {# Subjects (2026-09-24): the registered one first, then every
+     thread attached by hand; strike out, never delete; paste another. #}
+  <div class="subjects" id="subjects">
+    <div><span class="k">{{ t.subjects }}</span></div>
+    <ul class="plain">
+      {% if values.get('source_subject') %}
+      <li><span class="pill muted-pill">{{ t.subj_registered }}</span>
+        <span class="note">{{ values.get('source_subject') }}</span></li>
+      {% endif %}
+      {# one line per subject text; struck-out ones are put back from More (2026-09-28) #}
+      {% for line in (subject_lines if subject_lines is defined and subject_lines else []) if line.live and not line.registered %}
+        <li>
+          <span class="note">{{ line.text or t.subj_not_recorded }}</span>
+          <button class="link tiny" type="submit" form="subject-line-{{ line.ids|join('-') }}">{{ t.thread_void }}</button>
+        </li>
+      {% endfor %}
+    </ul>
+    {% if clash is defined and clash %}
+      <p class="clash">{{ t.subj_clash_line }} <a href="{{ url_for('enquiry', enquiry_id=clash.id) }}" class="mono">{{ clash.opp_no }}</a>
+        <span class="pill s-{{ (clash.status or '')|lower }}">{{ clash.status }}</span>
+        {% if clash_subject %}<span class="mono small">{{ clash_subject }}</span>{% endif %}</p>
+    {% endif %}
+    <div class="add-subject">
+      <input name="subject" form="subject-add" class="mono" placeholder="{{ t.subj_add_ph }}" aria-label="{{ t.subj_add_ph }}">
+      <button class="button small-button" type="submit" form="subject-add">{{ t.subj_add }}</button>
+    </div>
+  </div>
+{% endif %}
+</section>
+
+{% if ctx %}{% include "_routes_card.html" %}{% endif %}
+
+{# 13c: where no counted line exists, the case is its typed gross weight and
+   volume, in any unit (kg, lbs, t; cbm, cft) - stored as kg and cbm. On
+   Air the chargeable weight follows from them, on LCL the volume; the
+   register rules (Air needs a weight, LCL a volume) are met by a counted
+   line or by these boxes. #}
+{% macro typed_quantities() %}
+  <label class="f qty-box" data-qty="gross">
+    <span>Gross weight</span>
+    <span class="grp"><input id="fld-gross_kg" name="gross_kg" data-num data-qty-value="gross"
+      value="{{ '%g'|format(values.get('gross_kg')) if values.get('gross_kg') is number else (values.get('gross_kg') or '') }}" placeholder="2,200 lbs">
+      <select name="gross_unit" data-qty-unit="gross">{% for u in ['kg', 'lbs', 't'] %}<option{% if (values.get('gross_unit') or 'kg') == u %} selected{% endif %}>{{ u }}</option>{% endfor %}</select></span>
+    <em class="note conv" data-qty-conv="gross"></em>
+    {% if errors.gross_kg %}<em class="err">{{ errors.gross_kg }}</em>{% endif %}
+  </label>
+  <label class="f qty-box" data-qty="volume">
+    <span>Volume</span>
+    <span class="grp"><input id="fld-volume_cbm" name="volume_cbm" data-num data-qty-value="volume"
+      value="{{ '%g'|format(values.get('volume_cbm')) if values.get('volume_cbm') is number else (values.get('volume_cbm') or '') }}" placeholder="12.5">
+      <select name="volume_unit" data-qty-unit="volume">{% for u in ['cbm', 'cft'] %}<option{% if (values.get('volume_unit') or 'cbm') == u %} selected{% endif %}>{{ u }}</option>{% endfor %}</select></span>
+    <em class="note conv" data-qty-conv="volume"></em>
+    {% if errors.volume_cbm %}<em class="err">{{ errors.volume_cbm }}</em>{% endif %}
+  </label>
+{% endmacro %}
+<section class="card sec-card" id="cargo">
+{% set cargo_asks = cargo_asks if cargo_asks is defined else 0 %}
+{% set cargo_mail_text = cargo_mail_text if cargo_mail_text is defined else [] %}
+<div class="card-head cargo-head">
+  <h2>{{ t.sec_cargo }}</h2>
+  {% if cargo_asks %}<span class="pill chk-pill" id="cargo-check-count" data-n="{{ cargo_asks }}">check {{ cargo_asks }}</span>{% endif %}
+  {% if cargo_mail_text %}<button type="button" class="link src-toggle" data-toggle="cargo-source" data-show="Show the mail text" data-hide="Hide the mail text">Show the mail text</button>{% endif %}
+</div>
+{% if cargo_mail_text %}
+  {# what the numbers were read from (v34): the totals marked with a sigma,
+     every line numbered like the card's rows, the numbers highlighted #}
+  <div class="cargo-source" id="cargo-source" hidden>
+    {% for marker, text in cargo_mail_text %}<div class="src-line{% if marker == 'total' %} tot{% endif %}"><span class="mk">{% if marker == 'total' %}&Sigma;{% else %}{{ marker }}{% endif %}</span><span class="src-text">{{ text }}</span></div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{# Cargo lines: one row per line, the same card on the case
+   page and (v34) on the register form. #}
+{% set cs = cargo_state if cargo_state is defined and cargo_state else none %}
+{% set is_air = values.get('service_mode') in forms.AIR_MODES %}
+{% set has_lines = cs and cs.lines %}
+{% if cargo_view is defined and cargo_view %}
+  {% set reg = not ctx %}
+  {% include "_cargo_case.html" %}
+{% endif %}
+
+<div class="form-grid four">
+
+  {% if not ctx %}
+  <label class="f">
+    <span>Service mode</span>
+    <select name="service_mode" id="service_mode">
+      <option value="">-</option>
+      {% for m in forms.SERVICE_MODES %}
+        <option value="{{ m }}" {% if values.get('service_mode') == m %}selected{% endif %}>{{ m }}</option>
+      {% endfor %}
+    </select>
+    {{ whence('service_mode', hints, quoted) }}
+  </label>
+
+  <label class="f">
+    <span>Incoterm</span>
+    <select name="incoterm" id="incoterm">
+      <option value="">-</option>
+      {% for i in forms.INCOTERMS %}
+        <option value="{{ i }}" {% if values.get('incoterm') == i %}selected{% endif %}>{{ i }}</option>
+      {% endfor %}
+    </select>
+    {{ whence('incoterm', hints, quoted) }}
+  </label>
+  {% endif %}
+
+  {% set typed_numbers = not ctx or not (totals is defined and totals.lines_counted) %}
+  {% if typed_numbers and (not ctx or values.get('service_mode') == 'FCL' or values.get('container_qty')) %}
+  <label class="f q {{ state.container_type }}" data-field="container_type">
+    <span>Container type</span>
+    <select id="fld-container_type" name="container_type">
+      <option value="">-</option>
+      {% for c in container_types %}
+        <option value="{{ c }}" {% if values.get('container_type') == c %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+    {% if errors.container_type %}<em class="err">{{ errors.container_type }}</em>{% endif %}
+    {{ whence('container_type', hints, quoted) }}
+  </label>
+
+  <label class="f q {{ state.container_qty }}" data-field="container_qty">
+    <span>Container qty</span>
+    <input id="fld-container_qty" name="container_qty" value="{{ values.get('container_qty') or '' }}">
+    {% if errors.container_qty %}<em class="err">{{ errors.container_qty }}</em>{% endif %}
+    {{ whence('container_qty', hints, quoted) }}
+  </label>
+  {% endif %}
+
+  <label class="f">
+    <span>Commodity</span>
+    <input id="fld-commodity" name="commodity" value="{{ values.get('commodity') or '' }}">
+  </label>
+
+  <label class="f q {{ state.qty_raw }}" data-field="qty_raw">
+    <span>Quantity as received</span>
+    <input name="qty_raw" id="qty_raw" value="{{ values.get('qty_raw') or '' }}"
+           placeholder="FCL:3 x 40'HQ"{% if has_lines %} readonly title="{{ t.cargo_totals_hint.format(n=cs.lines|length) }}"{% endif %}>
+    {% if has_lines %}<em class="note">{{ t.cargo_totals_hint.format(n=cs.lines|length) }}</em>
+    {% else %}<em class="note"><button type="button" class="link" id="parse-qty">Parse into the fields</button></em>{% endif %}
+    {% if errors.qty_raw %}<em class="err">{{ errors.qty_raw }}</em>{% endif %}
+  </label>
+
+  {% if ctx %}
+  {# v33: a case without counted lines is its gross weight and volume, typed;
+     the chargeable weight and the W/M follow from them (the totals above) #}
+  {% if typed_numbers %}{{ typed_quantities() }}{% endif %}
+  {% elif not has_lines %}
+  {# the register form (13c): no Air weight / LCL volume boxes - the case's
+     weight is the lines' or these boxes', in any unit #}
+  {{ typed_quantities() }}
+  {% endif %}
+
+  <fieldset class="f wide tags">
+    <legend>Special handling</legend>
+    {# Only the box itself is clickable: a label wrapping the text made the
+       whole row a hit area and these were ticked by accident (2026-09-17).
+       The name still reaches a screen reader through aria-label. #}
+    {% for tag in special_handling %}
+      <span class="tag">
+        <input type="checkbox" name="special_handling" value="{{ tag }}"
+               aria-label="{{ tag }}" {% if tag in tags %}checked{% endif %}>
+        <span class="tag-text">{{ tag }}</span>
+      </span>
+    {% endfor %}
+  </fieldset>
+</div>
+</section>
+
+{% if not ctx %}
+<section class="card sec-card" id="route">
+<h2>{{ t.sec_route }}</h2>
+{{ route_panels(values, '', errors, state, kept, hints, quoted) }}
+</section>
+{% endif %}

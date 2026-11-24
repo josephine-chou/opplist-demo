@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% from "_status.html" import status_label %}
+{% block title %}{{ t.nav_tracking }}{% endblock %}
+{% block main_class %}tracking-page{% endblock %}
+{% block content %}
+{# The Tracking page, v2 (2026-09-24): the layout of
+   export-preview\OppList_Tracking_SAMPLE.html on the real rule output.
+   tracking.run and the rules are as they were; tracking.page_model
+   regroups their rows. Every button posts to the route it posted to
+   before, with the same field names. Search, filters, sort and Show all
+   are plain script over the rendered rows - nothing is fetched. #}
+{% set m = model %}
+
+<div class="titlerow">
+  <h1>{{ t.nav_tracking }}</h1>
+  <span class="asof"><b>{{ m.today|day(weekday=True, year=True) }}</b>
+    &middot; <span class="archive-status {{ 'bad' if not archive.ok else '' }}" id="archive-status">{% if archive.exists and archive.last_sync_at %}{{ t.trk_synced.format(at=archive.last_sync_at[11:16], n='{:,}'.format(archive.count)) }}{% if not archive.ok %} &middot; {{ t.archive_synced }} {{ archive.last_sync_at[:16] }} &middot; {{ archive.reason }}{% endif %}{% else %}{{ archive.reason }}{% endif %}{% if not archive.ok %} &middot; {{ t.archive_run }}{% endif %}</span>
+    {% if scheduled_run and scheduled_run.at %}&middot; <span class="archive-status sched-status {{ '' if scheduled_run.ok else 'bad' }}" id="scheduled-status" title="{{ scheduled_run.command }}{% if scheduled_run.commit %} at {{ scheduled_run.commit }}{% endif %}">{{ t.trk_scheduled.format(at=scheduled_run.at[5:16]|replace('-', '/'), state=scheduled_run.state) }}{% if scheduled_run.reason and not scheduled_run.ok %}: {{ scheduled_run.reason }}{% endif %}</span>{% endif %}
+    {% set off = scheduled_run.offsite if scheduled_run else none %}{% if off %}&middot; <span class="archive-status offsite-status {{ 'bad' if off.bad else '' }}" id="offsite-status" title="{{ off.folder }}">{% if off.last_copy %}{{ t.trk_offsite.format(date=off.last_copy) }}{% else %}{{ t.trk_offsite_none }}{% endif %}{% if off.failed %}: {{ t.offsite_failed }} ({{ off.reason }}){% endif %}</span>{% endif %}
+    &middot; {{ t.trk_lead }}</span>
+  <div class="search"><input type="search" id="trk-search" placeholder="{{ t.trk_search }}" aria-label="{{ t.trk_search }}"></div>
+</div>
+{% if archive.behind_line %}<p class="small archive-behind" id="archive-behind">{{ archive.behind_line }}</p>{% endif %}
+
+{# ------------------------------------------------------------- tiles ---- #}
+<div class="tiles">
+  {% for tile in m.tiles %}
+    <a class="tile t-{{ tile.colour }}" href="#{{ tile.key }}"><div class="t-l">{{ tile.label }}</div>
+      <div class="t-n" data-tile="{{ tile.key }}">{{ tile.count }}</div><div class="t-s">{{ tile.hint }}</div></a>
+  {% endfor %}
+</div>
+{% if not m.total %}<p class="clear"><strong>{{ t.tracking_clear }}</strong></p>{% endif %}
+
+{# ----------------------------------------------------------- toolbar ---- #}
+<div class="toolbar">
+  <div class="views">
+    <button type="button" class="view {{ 'on' if view == 'today' else '' }}" data-view="today">{{ t.trk_view_today }}<b data-total="today">{{ m.today_total }}</b></button>
+    <button type="button" class="view {{ 'on' if view == 'backlog' else '' }}" data-view="backlog">{{ t.trk_view_backlog }}<b data-total="backlog">{{ m.backlog_total }}</b></button>
+    <button type="button" class="view {{ 'on' if view == 'all' else '' }}" data-view="all">{{ t.trk_view_all }}</button>
+  </div>
+  <button type="button" class="chip" data-filter="latam">{{ t.trk_chip_latam }}</button>
+  <button type="button" class="chip" data-filter="air">{{ t.trk_chip_air }}</button>
+  <button type="button" class="chip" data-filter="ocean">{{ t.trk_chip_ocean }}</button>
+  <button type="button" class="chip" data-filter="office">{{ t.trk_chip_offices }}</button>
+  <div class="right">{{ t.trk_sort }}
+    <button type="button" class="chip on" data-sort="days">{{ t.col_days }} &#8595;</button>
+    <button type="button" class="chip" data-sort="requester">{{ t.trk_sort_requester }}</button>
+    <button type="button" class="chip" data-sort="step">{{ t.trk_sort_step }}</button>
+  </div>
+</div>
+
+{# ------------------------------------------------------- row macros ---- #}
+{% macro reason_pick(row, status, chosen='') %}
+  {# 'Drop...' / 'Lost...' / 'Cancelled...': the reason list and Confirm, folded until pressed #}
+  {% set box = 'reason-' ~ row.key ~ '-' ~ row.ref_id ~ '-' ~ status|lower %}
+  <button class="btn" type="button" data-toggle="{{ box }}">{{ t.drop_dots if status == 'Dropped' else (t.cancelled_dots if status == 'Cancelled' else t.lost_dots) }}</button>
+  <span class="reason js-hide" id="{{ box }}">
+    <select name="closed_reason" aria-label="Reason" class="sel">
+      <option value="">{{ t.reason_if_closed }}</option>
+      {% set reasons = closed_reasons_dropped if status == 'Dropped' else (closed_reasons_cancelled if status == 'Cancelled' else closed_reasons_lost) %}
+      {% for reason in reasons %}
+        <option value="{{ reason }}"{% if reason == chosen %} selected{% endif %}>{{ reason }}</option>
+      {% endfor %}
+      {# L2: a No response reason not on the list yet; choosing it adds it #}
+      {% if chosen and chosen not in reasons %}<option value="{{ chosen }}" selected>{{ chosen }}</option>{% endif %}
+    </select>
+    <button class="btn" name="do" value="quick:{{ status }}">{{ t.confirm }}</button>
+  </span>
+{% endmacro %}
+
+{% macro reason_menu() %}
+  <select name="closed_reason" aria-label="Reason" class="sel js-hide">
+    <option value="">{{ t.reason_if_closed }}</option>
+    {% for reason in closed_reasons_lost %}<option value="{{ reason }}" data-status="Lost">{{ reason }}</option>{% endfor %}
+    {% for reason in closed_reasons_cancelled %}<option value="{{ reason }}" data-status="Cancelled">{{ reason }}</option>{% endfor %}
+    {% for reason in closed_reasons_dropped %}<option value="{{ reason }}" data-status="Dropped">{{ reason }}</option>{% endfor %}
+  </select>
+{% endmacro %}
+
+{% macro status_set(fid) %}
+  <select name="status" aria-label="Status" class="status-pick sel" form="{{ fid }}">
+    <option value="">{{ t.set_status }}...</option>
+    {% for st in statuses %}<option value="{{ st }}">{{ st }}</option>{% endfor %}
+  </select>
+  {{ reason_menu() }}
+  <button class="btn" name="do" value="status" form="{{ fid }}">{{ t.set }}</button>
+{% endmacro %}
+
+{# FX7: the follow-up the scan found waits in the case's Suggested updates;
+   accepting it moves the case on as a logged one does #}
+{% macro found_fu(row) %}
+  <a class="btn primary found-fu" href="{{ url_for('enquiry', enquiry_id=row.enquiry_id) }}#sg-{{ row.found_fu.id }}">Found in the mail on {{ row.found_fu.proposed_date|day }}: accept it in Suggested updates</a>
+{% endmacro %}
+
+{% macro actions(card, row) %}
+  {% set fid = 'row-' ~ card.key ~ '-' ~ row.ref_id %}
+  {# the row's one form: the main buttons live in it, the More panel's
+     fields point at it with form=, so nothing nests #}
+  <form method="post" action="{{ url_for('tracking_act') }}" class="row-actions" id="{{ fid }}">
+    <input type="hidden" name="rule" value="{{ row.rule }}">
+    <input type="hidden" name="kind" value="{{ row.kind }}">
+    <input type="hidden" name="ref_id" value="{{ row.ref_id }}">
+    {% if row.enquiry_id %}<input type="hidden" name="enquiry_id" value="{{ row.enquiry_id }}">{% endif %}
+    {% if row.party_id %}<input type="hidden" name="party_id" value="{{ row.party_id }}">{% endif %}
+    {% if card.key == 'replied' %}
+      <button class="btn primary" name="do" value="quick:requote">{{ t.requote }}</button>
+      <button class="btn" name="do" value="quick:Won">{{ t.quick_won }}</button>
+      {{ reason_pick(row, 'Lost') }}
+      {{ reason_pick(row, 'Cancelled') }}
+      <button class="btn" name="do" value="snooze_7">{{ t.wait_7 }}</button>
+    {% elif card.key in ('fu1', 'fu2') %}
+      {% if row.found_fu %}{{ found_fu(row) }}{% else %}
+      <button class="btn primary" name="do" value="followup">{{ t.trk_log_sent }}</button>{% endif %}
+      <button class="btn" name="do" value="snooze_7">{{ t.wait_7 }}</button>
+    {% elif card.key == 'silent' %}
+      {# L1: Lost with the requester's No response reason chosen (L2), Cancelled, Keep (On hold for silent_days); Note is under More #}
+      {{ reason_pick(row, 'Lost', row.no_response) }}
+      {{ reason_pick(row, 'Cancelled') }}
+      <button class="btn" name="do" value="keep">Keep</button>
+    {% elif card.key == 'decide' %}
+      {% if row.found_fu %}{{ found_fu(row) }}{% endif %}
+      <button class="btn" name="do" value="quick:Won">{{ t.quick_won }}</button>
+      {{ reason_pick(row, 'Lost', row.no_response) }}
+      {{ reason_pick(row, 'Cancelled') }}
+      <button class="btn" name="do" value="snooze_7">{{ t.wait_7 }}</button>
+    {% elif card.key == 'wait' %}
+      {# WR1: the details chasers; at Decide, the choices a New case has #}
+      {% if row.step == 'Decide' %}
+        {% if row.found_fu %}{{ found_fu(row) }}{% endif %}
+        {{ reason_pick(row, 'Lost', row.no_response) }}
+        {{ reason_pick(row, 'Cancelled') }}
+        <button class="btn" name="do" value="snooze_7">{{ t.wait_7 }}</button>
+      {% elif row.found_fu %}{{ found_fu(row) }}
+      {% else %}
+        <button class="btn" name="do" value="followup">{{ t.trk_log_sent }}</button>
+      {% endif %}
+      <button class="btn" name="do" value="info_received">Info received</button>
+    {% elif row.rule == 'R1' %}
+      <button class="btn primary" name="do" value="quick:Quoted">{{ t.quick_quoted }}</button>
+      <a class="btn" href="{{ url_for('enquiry', enquiry_id=row.enquiry_id) }}#vendors">{{ t.ask_vendor }}</a>
+      {# WR1: we wait for the requester's details - what we need, then Confirm #}
+      {% set wbox = 'wait-' ~ row.key ~ '-' ~ row.ref_id %}
+      <button class="btn" type="button" data-toggle="{{ wbox }}">Waiting for requester</button>
+      <span class="reason js-hide" id="{{ wbox }}">
+        <input name="what" class="sel wait-what" maxlength="300" value="{{ row.wait_prefill }}" placeholder="What we need" aria-label="What we need">
+        <button class="btn" name="do" value="wait">{{ t.confirm }}</button>
+      </span>
+      {{ reason_pick(row, 'Dropped') }}
+    {% elif row.rule in ('R9', 'R4') %}
+      {{ status_set(fid) }}
+    {% elif row.rule == 'R2' %}
+      <label class="chk"><input type="checkbox" name="quoted"> {{ t.they_quoted }}</label>
+      <button class="btn" name="do" value="vendor_replied">{{ t.log_reply }}</button>
+    {% elif row.rule == 'R6' %}
+      <a class="btn primary" href="{{ url_for('enquiry', enquiry_id=row.enquiry_id) }}#won">{{ t.trk_record_rate }}</a>
+    {% elif row.rule == 'R5' %}
+      <a class="btn primary" href="{{ url_for('enquiry', enquiry_id=row.enquiry_id) }}#request">{{ t.trk_open_case }}</a>
+    {% elif row.rule == 'R8' %}
+      <a class="btn primary" href="{{ url_for('enquiry', enquiry_id=row.enquiry_id) }}#route">{{ t.trk_fix_lane }}</a>
+    {% elif row.rule == 'R7' %}
+      <select name="type" aria-label="Type" class="sel">
+        {% for ty in ['outreach','reply','call','meeting','note'] %}<option value="{{ ty }}">{{ ty }}</option>{% endfor %}
+      </select>
+      <button class="btn" name="do" value="touch">{{ t.log_touch }}</button>
+    {% elif row.rule == 'R10' %}
+      <a class="btn primary" href="{{ url_for('shipment_page', shipment_id=row.shipment_id) }}">{{ t.open_shipment }}</a>
+    {% endif %}
+  </form>
+  {% if row.rule == 'R5' and row.who %}{% with who=row.who, who_case=row.enquiry_id, who_back=url_for('tracking_page') ~ '#' ~ card.key %}{% include "_who_asked.html" %}{% endwith %}{% endif %}
+  <details class="more">
+    <summary class="btn more">{{ t.more }} &#9662;</summary>
+    <div class="more-body">
+      <label class="f-inline">{{ t.trk_date }} <input type="date" name="at" value="{{ today }}" aria-label="Date" form="{{ fid }}"></label>
+      {% if row.enquiry_id %}
+        <span class="line">
+          <a class="btn" href="{{ url_for('enquiry', enquiry_id=row.enquiry_id) }}">{{ t.trk_open_case }}</a>
+          {% if row.entry_id %}
+            <form method="post" class="inline-form" action="{{ url_for('enquiry_open_in_outlook', enquiry_id=row.enquiry_id) }}">
+              <button class="btn" type="submit">{{ t.open_in_outlook }}</button>
+            </form>
+          {% endif %}
+        </span>
+      {% elif row.party_id %}
+        <span class="line"><a class="btn" href="{{ url_for('party', party_id=row.party_id) }}">{{ t.open }}</a></span>
+      {% endif %}
+      {% if row.kind == 'enquiry' and row.rule not in ('R9', 'R4') %}
+        <span class="line">{{ status_set(fid) }}</span>
+      {% endif %}
+      {% if card.key in ('fu1', 'fu2') %}
+        <span class="line">
+          <button class="btn" name="do" value="quick:Won" form="{{ fid }}">{{ t.quick_won }}</button>
+          <select name="closed_reason" aria-label="Reason" class="sel" form="{{ fid }}">
+            <option value="">{{ t.reason_if_closed }}</option>
+            <optgroup label="{{ t.act_lost }}">{% for reason in closed_reasons_lost %}<option value="{{ reason }}">{{ reason }}</option>{% endfor %}</optgroup>
+            <optgroup label="{{ t.act_cancelled }}">{% for reason in closed_reasons_cancelled %}<option value="{{ reason }}">{{ reason }}</option>{% endfor %}</optgroup>
+          </select>
+          <button class="btn" name="do" value="quick:Lost" form="{{ fid }}">{{ t.lost_dots }}</button>
+          <button class="btn" name="do" value="quick:Cancelled" form="{{ fid }}">{{ t.cancelled_dots }}</button>
+        </span>
+      {% endif %}
+      {% if card.key == 'decide' %}
+        <span class="line">
+          <button class="btn" name="do" value="followup" form="{{ fid }}">{{ t.log_fu }}</button>
+          <label class="chk"><input type="checkbox" name="channel" value="call" form="{{ fid }}"> {{ t.by_call }}</label>
+        </span>
+      {% endif %}
+      {% if row.kind == 'enquiry' %}
+        <span class="line">
+          <input name="note" placeholder="{{ t.note }}" aria-label="Note" form="{{ fid }}" class="sel">
+          <button class="btn" name="do" value="note" form="{{ fid }}">{{ t.add_note }}</button>
+        </span>
+      {% endif %}
+      <span class="line snooze">{{ t.snooze }}
+        {% for days in snooze_choices %}<button class="link" name="do" value="snooze_{{ days }}" form="{{ fid }}">{{ days }}d</button>{% endfor %}
+        <input type="date" name="until" aria-label="{{ t.snooze }} until" form="{{ fid }}">
+        <button class="link" name="do" value="snooze_until" form="{{ fid }}">&rarr;</button>
+      </span>
+      {% if row.enquiry_id and row.rule != 'R10' %}
+        <span class="line">
+          <form method="post" class="inline-form" action="{{ url_for('enquiry_duplicate', enquiry_id=row.enquiry_id) }}">
+            <input type="hidden" name="at" value="{{ today }}">
+            <button class="link" name="action" value="error" type="submit">{{ t.mark_in_error }}</button>
+          </form>
+          <form method="post" class="inline-form" action="{{ url_for('enquiry_scope', enquiry_id=row.enquiry_id) }}">
+            <input type="hidden" name="scope" value="{{ 'In' if row.scope == 'Out' else 'Out' }}">
+            <button class="link" type="submit">{{ t.scope_switch }} scope {{ 'In' if row.scope == 'Out' else 'Out' }}</button>
+          </form>
+        </span>
+      {% endif %}
+    </div>
+  </details>
+{% endmacro %}
+
+{% macro tr(card, row, hidden) %}
+  <tr class="{{ 'late' if row.late else '' }}{{ ' extra' if hidden else '' }}" {% if hidden %}hidden{% endif %}
+      data-latam="{{ 'Y' if row.latam else 'N' }}" data-air="{{ 'Y' if row.air else 'N' }}" data-ocean="{{ 'Y' if row.ocean else 'N' }}"
+      data-office="{{ 'Y' if row.office else 'N' }}" data-days="{{ row.days if row.days is not none else -1 }}"
+      data-requester="{{ row.requester|lower }}" data-step="{{ row.pill|lower }}" data-search="{{ row.search }}">
+    <td class="chk-cell">{% if card.batch %}<input type="checkbox" name="ids" value="{{ row.enquiry_id }}" form="decide-R3" class="decide-pick" data-reason="{{ row.no_response }}" aria-label="Select {{ row.opp }}">{% endif %}</td>
+    <td class="case">
+      <div class="c1">
+        {% if card.party %}<a href="{{ url_for('party', party_id=row.party_id) }}"><b>{{ row.label }}</b></a>
+        {% elif row.rule == 'R10' %}<a class="opp" href="{{ url_for('shipment_page', shipment_id=row.shipment_id) }}">{{ row.opp }}</a> <b>{{ row.requester }}</b>
+        {% else %}<a class="opp" href="{{ url_for('enquiry', enquiry_id=row.enquiry_id) }}">{{ row.opp }}</a> <b>{{ row.requester }}</b>{% endif %}
+        
+      </div>
+      <div class="c2" title="{{ row.lane }}">{{ row.lane }}</div>
+    </td>
+    <td class="step"><span class="pill {{ row.pill_cls }}">{{ row.pill }}</span>{% if row.sub %}<div class="sub">{{ row.sub }}</div>{% endif %}</td>
+    <td class="days {{ 'late' if row.late else '' }}">
+      {% if row.days is not none %}<span class="n">{{ row.days }}</span><span class="u">d</span>{% endif %}
+      {% if row.since_label %}<div class="since">since {{ row.since_label }}</div>{% endif %}
+    </td>
+    <td class="last">{{ row.last }}{% if row.quote %} <span class="q">&ldquo;{{ row.quote }}&rdquo;</span>{% endif %}</td>
+    <td class="acts">{{ actions(card, row) }}</td>
+  </tr>
+{% endmacro %}
+
+{% macro card_body(card) %}
+  {% if card.rows %}
+  <table class="tbl">
+    <thead><tr><th class="chk-cell"></th>
+      {% if card.party %}<th>{{ t.trk_col_agent }}</th><th>{{ t.trk_col_state }}</th><th>{{ t.trk_col_quiet }}</th><th></th>
+      {% else %}<th>{{ t.trk_col_case }}</th><th>{{ t.trk_col_step }}</th><th>{{ t.col_days }}</th><th>{{ t.trk_col_last }}</th>{% endif %}
+      <th>{{ t.col_actions }}</th></tr></thead>
+    <tbody>
+      {% for row in card.rows %}
+        {% if card.grouped and (loop.first or loop.previtem.group != row.group) %}
+          {% set g = card.groups|selectattr('label', 'equalto', row.group)|first %}
+          <tr class="grp-head"><td colspan="6"><b>{{ row.group }}</b> <span class="muted">{{ g.count }}</span></td></tr>
+        {% endif %}
+        {{ tr(card, row, (loop.index0 >= limit) and not card.grouped) }}
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if card.batch %}
+    {# the checkboxes sit in the rows (form="decide-R3"); this is the form they belong to #}
+    <div class="batch">
+      <label class="chk"><input type="checkbox" data-select-shown="{{ card.key }}"> {{ t.trk_select_shown.format(n=[card.count, limit]|min) }}</label>
+      <form method="post" action="{{ url_for('tracking_decide_lost') }}" id="decide-R3" class="inline-form decide-form" data-confirm="{{ t.decide_confirm }}">
+        <input type="hidden" name="at" value="{{ today }}">
+        <button class="btn" type="submit">{{ t.decide_lost }}</button>
+      </form>
+      <span class="muted small">{{ t.trk_still_alive }}</span>
+    </div>
+  {% endif %}
+  {% if card.count > limit and not card.grouped %}
+    <div class="showall"><a href="#{{ card.key }}" data-show-all="{{ card.key }}">{{ t.show_all }} {{ card.count }}</a>
+      <span class="muted">({{ limit }} {{ t.shown_of }} {{ card.count }})</span></div>
+  {% endif %}
+  {% else %}<p class="nothing">{{ t.nothing_here }}.</p>{% endif %}
+{% endmacro %}
+
+{% macro group(card) %}
+  {% if card.folded %}
+    <details class="card group folded tracking-section other" id="{{ card.key }}" data-rule="{{ card.rule }}"{% if open_card == card.key %} open{% endif %}>
+      <summary><span class="dot d-{{ card.colour }}"></span><h2>{{ card.title }}</h2>
+        <span class="count d-{{ card.colour }}" data-count="{{ card.key }}">{{ card.count }}</span>
+        <span class="hint">{{ card.hint }}</span><span class="chev">&#9662;</span></summary>
+      {{ card_body(card) }}
+    </details>
+  {% else %}
+    <section class="card group tracking-section focus" id="{{ card.key }}" data-rule="{{ card.rule }}">
+      <div class="g-head"><span class="dot d-{{ card.colour }}"></span><h2>{{ card.title }}</h2>
+        <span class="count d-{{ card.colour }}" data-count="{{ card.key }}">{{ card.count }}</span>
+        <span class="hint">{{ card.hint }}</span><span class="g-tools">{{ t.trk_sort_days }}</span></div>
+      {{ card_body(card) }}
+    </section>
+  {% endif %}
+{% endmacro %}
+
+{# ------------------------------------------------------ today's work ---- #}
+<div id="today" data-half="today" {% if view == 'backlog' %}hidden{% endif %}>
+  {% for card in m.today_cards %}
+    {% if loop.first or (card.rule != 'R3' and loop.previtem.rule == 'R3') %}{% endif %}
+    {{ group(card) }}
+  {% endfor %}
+  {% if m.hidden %}<p class="muted small hidden-cards" id="hidden-cards">Hidden in <a href="{{ url_for('settings') }}#tracking-cards">Settings</a>: {% for h in m.hidden %}{{ h.title }} {{ h.count }}{% if not loop.last %} &middot; {% endif %}{% endfor %}</p>{% endif %}
+</div>
+
+{# ------------------------------------------------------------ backlog ---- #}
+<div id="backlog" data-half="backlog" {% if view == 'today' %}hidden{% endif %}>
+  <div class="band">{{ t.band_backlog }} <small>&middot; <span data-total="backlog">{{ m.backlog_total }}</span> {{ t.trk_backlog_note }}</small></div>
+  {% for card in m.backlog_cards %}{{ group(card) }}{% endfor %}
+  {% if not m.backlog_cards %}<p class="nothing muted">{{ t.nothing_here }}.</p>{% endif %}
+</div>
+{% endblock %}

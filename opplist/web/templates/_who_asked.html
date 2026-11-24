@@ -1,0 +1,71 @@
+{# MF1: Who asked? for a (TBC) case, shared by the case page's Request card
+   and Tracking's R5 row - who_asked.candidates, each with its evidence.
+   Nothing is written until she clicks. Expects: who (the candidates),
+   who_case (the case id), who_back (where the buttons come back to).
+   RG2b: the case page also passes who_outlook_on (the From Outlook button)
+   and who_outlook (what the mail selected in Outlook gave, with
+   who_outlook_thread: its conversation id and subject). #}
+{% set outlook_on = who_outlook_on is defined and who_outlook_on %}
+{% set from_outlook = who_outlook if who_outlook is defined and who_outlook else [] %}
+{% set thread = who_outlook_thread if who_outlook_thread is defined and who_outlook_thread else {} %}
+{% if who or outlook_on or from_outlook %}
+<div class="who-asked" id="who-asked-{{ who_case }}">
+  <div class="k">Who asked?
+    {% if outlook_on %}
+    <form method="post" class="inline-form" action="{{ url_for('enquiry_who_asked_outlook', enquiry_id=who_case) }}">
+      <input type="hidden" name="back" value="{{ who_back }}">
+      <button class="button small-button" type="submit" id="who-from-outlook"
+              title="Read the mail selected in Outlook as Register from Outlook does; nothing is written until you click">From Outlook</button>
+    </form>
+    {% endif %}
+  </div>
+  {% if who or from_outlook %}
+  <ul class="who-list">
+    {% for c in from_outlook + (who or []) %}
+    <li class="who-{{ c.kind }}">
+      {# FX3: one line - the evidence and the mail count are the name's hover text #}
+      {% set hint = c.evidence ~ (' · ' ~ c.mails ~ ' mails' if c.mails > 1 else '') %}
+      {% set office = c.extra.get('office') if c.extra else '' %}
+      {% if c.party_id %}<b class="who-name" title="{{ hint }}">{{ c.party_key }}</b>{% elif office %}<b class="who-name" title="{{ hint }}">{{ c.suggested_key }}</b> <span class="m">not on file</span>{% else %}<b class="who-name" title="{{ hint }}">{{ c.address }}</b> <span class="m">no party</span>{% endif %}
+      {% if c.kind == 'outlook' %}<span class="m">from Outlook</span>{% endif %}
+      {% if c.party_id %}
+      <form method="post" class="inline-form" action="{{ url_for('enquiry_who_asked_use', enquiry_id=who_case) }}">
+        <input type="hidden" name="party_id" value="{{ c.party_id }}">
+        <input type="hidden" name="evidence" value="{{ c.evidence }}">
+        <input type="hidden" name="back" value="{{ who_back }}">
+        {% if c.kind == 'outlook' and (thread.get('conversation_id') or thread.get('subject')) %}
+        <input type="hidden" name="conversation_id" value="{{ thread.get('conversation_id', '') }}">
+        <input type="hidden" name="subject" value="{{ thread.get('subject', '') }}">
+        <label class="m"><input type="checkbox" name="attach" value="1" checked> and attach this thread to the case</label>
+        {% endif %}
+        <button class="button small-button" type="submit">{% if c.kind == 'outlook' %}Use {{ c.party_key }} as requester{% else %}Use as requester{% endif %}</button>
+      </form>
+      {% else %}
+      <form method="post" class="inline-form" action="{{ url_for('enquiry_who_asked_add_party', enquiry_id=who_case) }}">
+        <input type="hidden" name="address" value="{{ c.address }}">
+        <input type="hidden" name="domain" value="{{ c.domain }}">
+        <input type="hidden" name="office" value="{{ office or '' }}">
+        <input type="hidden" name="country" value="{{ c.suggested_country }}">
+        <input type="hidden" name="back" value="{{ who_back }}">
+        {% if office %}
+        <input type="hidden" name="key" value="{{ c.suggested_key }}">
+        {% else %}
+        <input name="key" value="{{ c.suggested_key }}" placeholder="Party name" aria-label="Party name" class="sel">
+        <select name="type" aria-label="Type" class="sel">{% for ty in party_types if ty != 'Office' %}<option value="{{ ty }}">{{ ty }}</option>{% endfor %}</select>
+        {% endif %}
+        <button class="button small-button" type="submit">Add party</button>
+      </form>
+      {% endif %}
+      {% if c.kind == 'shipment' %}
+      <form method="post" class="inline-form" action="{{ url_for('enquiry_who_asked_duplicate', enquiry_id=who_case) }}">
+        <input type="hidden" name="of_id" value="{{ c.other_id }}">
+        <input type="hidden" name="back" value="{{ who_back }}">
+        <button class="button small-button" type="submit">Duplicate of {{ c.other_opp }}</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endif %}

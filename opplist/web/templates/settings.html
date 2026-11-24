@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}{{ t.nav_settings }}{% endblock %}
+{% block content %}
+<h1>{{ t.nav_settings }}</h1>
+
+<form method="post">
+
+  <section class="panel">
+    <h2>{{ t.where_exports_go }}</h2>
+    <div class="form-grid">
+      <label class="f wide">
+        <span>{{ t.export_target }}</span>
+        <label class="tag">
+          <input type="radio" name="export_target" value="preview"
+                 {% if export_target == 'preview' %}checked{% endif %}>
+          preview - <span class="mono">{{ preview_dir }}</span>
+        </label>
+        <label class="tag">
+          <input type="radio" name="export_target" value="publish"
+                 {% if export_target == 'publish' %}checked{% endif %}>
+          publish - <span class="mono">{{ live_dirs[0] }}</span>
+          and <span class="mono">{{ live_dirs[1] }}</span>
+        </label>
+        <em class="hint">{{ t.export_target_hint }}</em>
+      </label>
+
+      <label class="f wide">
+        <span>{{ t.auto_export }}</span>
+        <label class="tag">
+          <input type="checkbox" name="auto_export" {% if auto_on %}checked{% endif %}>
+          {{ t.auto_export_label }}
+        </label>
+        <em class="hint">{{ t.auto_export_hint }}</em>
+      </label>
+
+      {# FX3: shipments, off until they are redesigned #}
+      <label class="f wide" id="shipments-switch">
+        <span>Shipments</span>
+        <label class="tag">
+          <input type="checkbox" name="shipments" {% if shipments_on %}checked{% endif %}>
+          Show and run shipments
+        </label>
+        <em class="hint">Off: no Shipments menu, pages, Start shipment, Tracking R10 or shipment suggestions, and the morning run skips propose-shipments. The shipments stay in the database; turning this on brings them back.</em>
+      </label>
+
+      <label class="f wide">
+        <span>Shared-drive copy (may be blank)</span>
+        <input name="export_share_dir" value="{{ texts.export_share_dir }}"
+               class="mono">
+      </label>
+
+      <label class="f wide" id="offsite">
+        <span>{{ t.offsite_label }}</span>
+        <input name="offsite_backup_dir" value="{{ texts.offsite_backup_dir }}" class="mono">
+        <em class="hint">{{ t.offsite_hint }}</em>
+        {% if offsite and offsite.folder %}<em class="hint offsite-line {{ 'bad' if offsite.bad else '' }}" id="offsite-status">{% if offsite.last_copy %}{{ t.offsite_status.format(date=offsite.last_copy) }}{% else %}{{ t.trk_offsite_none }}{% endif %}{% if offsite.failed %} &middot; {{ t.offsite_failed }}: {{ offsite.reason }}{% endif %}</em>{% endif %}
+      </label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>{{ t.lists_heading }}</h2>
+    <p class="muted">{{ t.lists_hint }}</p>
+    <div class="form-grid">
+      {% for key, label in [('owners', 'Owners'),
+                            ('container_types', 'Container types'),
+                            ('packing_units', 'Packing'),
+                            ('special_handling', 'Special handling'),
+                            ('closed_reasons_lost', 'Lost reasons (the shipment went ahead without us)'),
+                            ('closed_reasons_cancelled', 'Cancelled reasons (the shipment did not go ahead)'),
+                            ('closed_reasons_dropped', 'Dropped reasons (the row should not exist)'),
+                            ('requote_reasons', 'Re-quote reasons (why a quote was done again)'),
+                            ('latam_countries', 'LATAM countries'),
+                            ('internal_domains', 'Our own mail domains'),
+                            ('service_scopes', 'Service (door / port scope of a route)'),
+                            ('report_events', 'Report events (month report, section 17): YYYY-MM-DD label, or YYYY-MM-DD to YYYY-MM-DD label')] %}
+        <label class="f">
+          <span>{{ label }}</span>
+          <textarea name="{{ key }}" rows="10">{{ lists[key]|join('\n') }}</textarea>
+        </label>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>{{ t.numbers_heading }}</h2>
+    <div class="form-grid">
+      {% for key, label in [
+          ('cadence_days_default', 'Default cadence (days)'),
+          ('rule_new_days', 'R1 New, no action after (working days)'),
+          ('rule_vendor_no_reply_days', 'R2 Vendor silent after (working days)'),
+          ('fu1_days', 'R3 FU1 due after (working days from the quote)'),
+          ('fu2_days', 'R3 FU2 due after (working days from FU1)'),
+          ('fu_decide_days', 'R3 Decide after (working days from the last FU)'),
+          ('fu1_wait_days', 'R3 Decide when FU1 got no answer (working days from FU1)'),
+          ('fu_max', 'R3 follow-ups before Decide'),
+          ('silent_days', 'R11 No reply after (days from the quote)'),
+          ('dedupe_window_days', 'Suspected duplicate window (days)'),
+          ('dedupe_same_subject_days', 'Same subject is the same case within (days)'),
+          ('suggestion_expire_days', 'Suggestions nobody decided expire after (days)'),
+          ('backup_keep', 'Daily restore points to keep'),
+          ('port', 'Port')] %}
+        <label class="f">
+          <span>{{ label }}</span>
+          <input name="{{ key }}" value="{{ numbers[key] }}" inputmode="numeric">
+        </label>
+      {% endfor %}
+    </div>
+    {# FX4: the Today's work cards Tracking hides; the rules still run #}
+    <div class="f wide" id="tracking-cards">
+      <span>Tracking: hide these cards of Today's work</span>
+      <input type="hidden" name="tracking_hidden_shown" value="1">
+      {% for key, title in tracking_cards %}
+        <label class="tag"><input type="checkbox" name="tracking_hidden" value="{{ key }}" {% if key in tracking_hidden %}checked{% endif %}> {{ title }}</label>
+      {% endfor %}
+      <em class="hint">A hidden card, its tile and its rows leave Tracking and the badge; the rules still run (the case page's Next step, the team site, Checks and the month report are unchanged).</em>
+    </div>
+  </section>
+
+  <section class="panel settings-limits">
+    <h2>Cargo checks</h2>
+    <p class="muted">What the Cargo card checks the numbers against (green passed, amber to decide).</p>
+    <div class="grid">
+      {% for key, label, value in cargo_limits %}
+        <label class="f">
+          <span>{{ label }}</span>
+          <input name="cargo_limit_{{ key }}" value="{{ '%g'|format(value) }}" inputmode="decimal">
+        </label>
+      {% endfor %}
+      <label class="f">
+        <span>US road, most a 40' on a standard chassis carries (kg)</span>
+        <input name="us_chassis_max_kg" value="{{ us_chassis_max_kg }}" inputmode="decimal">
+      </label>
+    </div>
+  </section>
+
+  {# W1a: the team site - OppList pushes its lists to the site's document store; in this edition a folder of JSON files #}
+  <section class="panel" id="team-site">
+    <h2>Team site</h2>
+    <p class="muted">The colleagues' website. In this edition its documents are kept in a folder of JSON files under the data folder (store {{ team.project }}) and no service is contacted. OppList pushes the Assign List, the inquiries, each case and the month reports to it, and first takes in what people did there (assign, quote, follow-up, waiting, answered): thirty seconds after a change, every five minutes while the app is open, and when it starts. Rate requests logged with Ask vendors come back as vendor requests.</p>
+    <input type="hidden" name="team_site_form" value="1">
+    <label class="check" id="team-site-store"><input type="checkbox" name="team_site_store" value="1" {% if team.store_on %}checked{% endif %}>
+      Push to the team site's local store</label>
+    <label class="check" id="ratecard-store"><input type="checkbox" name="ratecard_store" value="1" {% if team.ratecard_on %}checked{% endif %}>
+      Push the vendors' rates to the Rate Card's local store</label>
+    <div class="form-grid">
+      <label class="f wide">
+        <span>Team CC on a rate request</span>
+        <input name="rate_request_cc" value="{{ team.cc }}" placeholder="empty = no team CC on the card">
+        <em class="note">The Ask vendors card offers to copy this address; leave it empty and the card has no CC box.</em>
+      </label>
+      {# FX4: shown in the site's What is Make Outlook drafts? box (meta/sync.helperFolder) #}
+      <label class="f wide" id="helper-folder">
+        <span>Make Outlook drafts folder</span>
+        <input name="helper_folder" value="{{ team.helper }}" class="mono" placeholder="empty = the site shows none">
+        <em class="note">The team site's What is Make Outlook drafts? box shows it; it is sent with the sync, never written in a site file.</em>
+      </label>
+      {# FX3: the day's write guard #}
+      <label class="f" id="team-site-cap">
+        <span>Team site: most writes a day</span>
+        <input name="firebase_daily_cap" value="{{ team.cap }}" inputmode="numeric" class="mono">
+        <em class="note" id="team-site-today">{{ '{:,}'.format(team.today) }} written today &middot; a hosted store's free limit is 20,000 a day; a normal day is a few hundred.</em>
+      </label>
+    </div>
+    {# W3: the quote card's markup rules, pushed as meta/sync.quoteRules #}
+    <h3 id="quote-card">Quote card</h3>
+    <div class="form-grid">
+      <label class="f">
+        <span>Markup on a vendor's rate (%)</span>
+        <input name="quote_markup_pct" value="{{ team.quote.markupPct }}" inputmode="decimal" class="mono">
+        <em class="note">One of our offices asking gets no markup.</em>
+      </label>
+      <label class="f">
+        <span>Lowest margin before the card warns (%)</span>
+        <input name="quote_margin_floor_pct" value="{{ team.quote.marginFloorPct }}" inputmode="decimal" class="mono">
+      </label>
+    </div>
+    <dl class="kv-list">
+      <dt>Set up</dt><dd>{% if team.ready %}yes{% else %}<span class="warn">no</span> <span class="muted small">{{ team.why }}</span>{% endif %}</dd>
+      <dt>Store</dt><dd class="mono">{{ team.account or '-' }}</dd>
+      {# Q2c: the vendors' rates to the Rate Card's Agent quotes #}
+      <dt>Rate Card</dt><dd class="{{ 'warn' if 'failed:' in (team.ratecard or '') else ('muted' if (team.ratecard or '').startswith('Off') else '') }}">{{ team.ratecard }}</dd>
+      {% if team.last %}
+      <dt>Last run</dt><dd class="{{ '' if team.last.ok else 'warn' }}">{{ team.last.at }}{% if team.last.ok %} &middot; {{ team.last.written }} document{{ '' if team.last.written == 1 else 's' }} written{% else %} &middot; failed: {{ team.last.error }}{% endif %}</dd>
+      {% if team.last.pull %}<dt>Taken in</dt><dd class="{{ 'warn' if 'stopped:' in team.last.pull else '' }}">{{ team.last.pull|replace('team site: ', '') }}</dd>{% endif %}
+      {% if team.counts %}<dt>Pushed</dt><dd>{{ team.counts }}</dd>{% endif %}
+      {% if team.last.vendors %}<dt>Vendors</dt><dd class="{{ 'warn' if '; ' in team.last.vendors else '' }}">{{ team.last.vendors|replace('vendors: ', '') }}</dd>{% endif %}
+      {% if team.last.too_big %}<dt>Not written</dt><dd class="warn">over 1,000,000 bytes: {{ team.last.too_big|join(', ') }}</dd>{% endif %}
+      {% if not team.last.ok and team.last.success %}<dt>Last good run</dt><dd>{{ team.last.success }}</dd>{% endif %}
+      {% else %}
+      <dt>Last run</dt><dd>never</dd>
+      {% endif %}
+    </dl>
+    <button class="button" type="submit" form="team-site-sync" {% if not team.ready %}disabled title="Needs the local store switched on and the app over its own database"{% endif %}>Sync now</button>
+  </section>
+
+  {# Q2d: Read quote - a vendor's reply read with her own Anthropic API key #}
+  <section class="panel" id="read-quote">
+    <h2>Read quote</h2>
+    <p class="muted">Read quote on a Rate requests row reads the vendor's reply with Claude through your own API key and makes drafts of their rates for the team site's rates drawer, to check line by line and save there. Typing the rates by hand always works. The key stays in ..\data\secrets; only whether it is there is shown.</p>
+    <input type="hidden" name="read_quote_present" value="1">
+    <div class="form-grid">
+      <label class="f"><span>Read quote</span>
+        <label class="tag"><input type="checkbox" name="read_quote_on" value="1"{% if rq.on %} checked{% endif %}> On</label>
+        <em class="hint">Off: no Read quote on the case page; typing works as always.</em></label>
+      <label class="f" id="read-quote-recorded"><span>Recorded answers</span>
+        <label class="tag"><input type="checkbox" name="read_quote_recorded" value="1"{% if rq.recorded %} checked{% endif %}> On</label>
+        <em class="hint">This edition: a reading is answered from the recordings in fixtures/read_quote. No key is needed and nothing is sent anywhere.</em></label>
+      <label class="f wide"><span>Key file</span>
+        <input name="read_quote_key" value="{{ rq.configured_key }}" class="mono" placeholder="{{ rq.key_path }}">
+        <em class="note">Empty = {{ rq.key_path }}; the key alone on one line. A path inside the repo is refused.</em></label>
+      <label class="f"><span>Model</span>
+        <select name="read_quote_model">{% for m in rq.models %}<option value="{{ m }}"{% if m == rq.model %} selected{% endif %}>{{ m }}</option>{% endfor %}
+          {% if rq.model not in rq.models %}<option value="{{ rq.model }}" selected>{{ rq.model }}</option>{% endif %}</select></label>
+      <label class="f"><span>Most a month (USD)</span>
+        <input name="read_quote_cap_usd" value="{{ '%g'|format(rq.cap) }}" inputmode="decimal" class="mono"></label>
+    </div>
+    <dl class="kv-list">
+      <dt>Key</dt><dd class="{{ '' if rq.has_key else 'warn' }}">{{ rq.key_line }}</dd>
+      <dt>This month</dt><dd>{{ rq.spend_line }}</dd>
+      <dt>Last error</dt><dd class="{{ 'warn' if rq.error else 'muted' }}">{{ rq.error or 'none' }}</dd>
+      <dt>Report</dt><dd><a href="{{ url_for('read_quote_report') }}">This week's report</a> <span class="muted small">(written to ..\data\reports when opened)</span></dd>
+    </dl>
+  </section>
+
+  <div class="form-actions">
+    <button class="button primary" type="submit">{{ t.save }}</button>
+    <a class="button" href="{{ url_for('export_page') }}">{{ t.nav_export }}</a>
+  </div>
+</form>
+<form method="post" id="team-site-sync" action="{{ url_for('team_site_sync_now') }}"></form>
+
+{# RG2b (layer 3): the reader's monthly check - the share of what it read that was saved as read #}
+{% if reader_table and reader_table.months %}
+<section class="reader-trend" id="reader-trend">
+  <h2>Register reader, month by month</h2>
+  <p class="muted small">The share of each field the reader filled whose value was saved as it read it, and how many it filled. Checked by the morning run on the 1st of each month.</p>
+  <table class="list compact">
+    <thead><tr><th>Field</th>{% for m in reader_table.months %}<th class="num">{{ m }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for r in reader_table.rows %}
+      <tr><td>{{ r.label }}</td>{% for c in r.cells %}<td class="num">{% if c %}{{ c.share }}% <span class="m">({{ c.count }})</span>{% else %}<span class="m">&ndash;</span>{% endif %}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+<p class="muted mono">{{ db_path }} &middot; schema version {{ schema_version }}</p>
+{# OP2: the code this server runs #}
+{% for line in running_lines %}<p class="muted mono running-line">{{ line }}</p>{% endfor %}
+{% endblock %}

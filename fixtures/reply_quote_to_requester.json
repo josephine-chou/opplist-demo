@@ -1,0 +1,25 @@
+{
+ "note": "Invented: our answer to the requester (KLX), both quotations attached, over their original request quoted below with an Outlook From/Sent/To/Subject header. Reads as quoting: Quoted on the day it went out, received on the day they asked, no vendor panel.",
+ "subject": "RE: Wheeling, IL 60090 to Shannon, Ireland - air and LCL options",
+ "sender_name": "JJC-ERIC LO",
+ "sender_address": "EricLo@jojofreight.example",
+ "sender_internal": true,
+ "received_on": "2026-09-15",
+ "received_at": "2026-09-15 16:20",
+ "to_addresses": [
+  "tlindqvist@shipklx.example",
+  "VictorLang@jojofreight.example"
+ ],
+ "cc_addresses": [
+  "AvaT@jojofreight.example",
+  "IrisChen@jojofreight.example"
+ ],
+ "display_to": "Tobias Lindqvist; JJC-VICTOR LANG; JJC-AVA TRAN; JJC-IRIS CHEN",
+ "conversation_id": "CONV-DEMO-SHANNON",
+ "entry_id": "ENTRY-DEMO-SHANNON-2",
+ "attachment_names": [
+  "Quotation air ORD-SNN.pdf",
+  "Quotation LCL CHI-SNN.pdf"
+ ],
+ "body": "Hello Tobias,\r\n\r\nAttached is our quotation for the air option, with the LCL option on a second sheet. Both are door delivered, customs clearance included.\r\n\r\nWarm Regards,\r\n\r\nEric Lo\r\nJoJo Freight (Chicago)\r\n\r\nFrom: Tobias Lindqvist <tlindqvist@shipklx.example>\r\nSent: Monday, September 14, 2026 10:05 AM\r\nTo: JJC-ERIC LO <EricLo@jojofreight.example>\r\nCc: JJC-VICTOR LANG <VictorLang@jojofreight.example>\r\nSubject: Wheeling, IL 60090 to Shannon, Ireland - air and LCL options\r\n\r\nEric,\r\n\r\nCould you quote this both ways, by air and as LCL? Three crates, 410 kg in total, delivered to the consignee in Shannon.\r\n\r\nTobias\r\n"
+}

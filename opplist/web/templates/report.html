@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Cheat sheet ' ~ sheet.title if view == 'cheat' else report.title }}{% endblock %}
+{% block content %}
+<style>
+{{ css|safe }}
+</style>
+
+<div class="report-head no-print">
+  <form method="get" action="{{ url_for('report_page') }}">
+    {% if view == 'cheat' %}<input type="hidden" name="view" value="cheat">{% endif %}
+    <a class="button" href="{{ url_for('report_page', month=previous, view=view or None) }}">&larr; {{ previous }}</a>
+    <select name="month" onchange="this.form.submit()" aria-label="Month">
+      {% for m in months %}
+        <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
+      {% endfor %}
+    </select>
+    <a class="button" href="{{ url_for('report_page', month=following, view=view or None) }}">{{ following }} &rarr;</a>
+  </form>
+  {% if view != 'cheat' %}
+  <form method="post" action="{{ url_for('export_report') }}">
+    <input type="hidden" name="month" value="{{ month }}">
+    <button class="button" name="kind" value="html" type="submit">{{ t.export_report_html }}</button>
+    <button class="button" name="kind" value="pdf" type="submit">{{ t.export_report_pdf }}</button>
+    <button class="button" name="kind" value="xlsx" type="submit">{{ t.export_report_xlsx }}</button>
+  </form>
+  {% endif %}
+</div>
+{% if view != 'cheat' %}
+<section class="inquiry-tbc no-print" id="inquiry-tbc">
+  <h3>{{ t.inquiries_tbc_head }} <span class="muted">{{ month }}</span></h3>
+  {% if inquiry_tbc %}
+  <p class="muted">{{ inquiry_tbc|length }} cell{{ '' if inquiry_tbc|length == 1 else 's' }} in
+    {{ inquiry_tbc|map(attribute='opp')|unique|list|length }} inquir{{ 'y' if (inquiry_tbc|map(attribute='opp')|unique|list|length) == 1 else 'ies' }}</p>
+  <div class="inquiry-tbc-list">
+    <table>
+      <thead><tr><th>Inquiry</th><th>Column</th><th>Fill in</th></tr></thead>
+      <tbody>
+      {% for r in inquiry_tbc %}
+        <tr><td><a href="{{ url_for('enquiry', enquiry_id=r.case_id) }}">{{ r.opp }}</a></td><td>{{ r.column }}</td><td>{{ r.fill }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">{{ t.inquiries_tbc_none }}</p>
+  {% endif %}
+  <a class="button" href="{{ url_for('report_inquiries_xlsx', month=month) }}">{{ t.inquiries_xlsx }}</a>
+</section>
+{% endif %}
+<nav class="report-tabs no-print">
+  <a href="{{ url_for('report_page', month=month) }}" class="{{ '' if view == 'cheat' else 'on' }}">Report</a>
+  <a href="{{ url_for('report_page', month=month, view='cheat') }}" class="{{ 'on' if view == 'cheat' else '' }}">Cheat sheet</a>
+</nav>
+
+<div class="mreport">
+  {% if view == 'cheat' %}{% include "cheat_body.html" %}{% else %}{% include "monthly_body.html" %}{% endif %}
+</div>
+{% endblock %}

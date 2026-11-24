@@ -1,0 +1,43 @@
+{
+ "about": "An invented carrier's reply to a rate request: one 40'HQ, Savannah to Callao, three charges, a validity date, transit, carrier and free time.",
+ "match": ["Ocean freight USD 1,840", "Seabright Line"],
+ "usage": {"input_tokens": 8600, "output_tokens": 640, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0},
+ "answer": {
+  "priced": true,
+  "why_not": "",
+  "routes": [
+   {"route": 1,
+    "options": [
+     {"label": "",
+      "currency": "USD",
+      "lines": [
+       {"seg": "Freight", "charge": "Ocean freight", "unit": "40'HQ", "unit_as_written": "per 40'HQ",
+        "currency": "USD", "rate": 1840, "word": "", "min": -1, "qty": -1, "amount": -1, "breaks": [],
+        "door_leg": "none", "quote": "Ocean freight USD 1,840 per 40'HQ", "percent": -1, "percent_of": "",
+        "approx": false},
+       {"seg": "Origin", "charge": "THC at origin", "unit": "CNTR", "unit_as_written": "per container",
+        "currency": "USD", "rate": 210, "word": "", "min": -1, "qty": -1, "amount": -1, "breaks": [],
+        "door_leg": "none", "quote": "THC at origin USD 210 per container", "percent": -1, "percent_of": "",
+        "approx": false},
+       {"seg": "Origin", "charge": "Documentation", "unit": "BL", "unit_as_written": "per BL",
+        "currency": "USD", "rate": 65, "word": "", "min": -1, "qty": -1, "amount": -1, "breaks": [],
+        "door_leg": "none", "quote": "Doc fee USD 65 per BL", "percent": -1, "percent_of": "",
+        "approx": false}
+      ],
+      "valid_until": "2027-06-30",
+      "valid_text": "Valid until 30 June 2027",
+      "transit": "about 19 days, direct",
+      "carrier": "Seabright Line",
+      "free_time": "10 days at destination",
+      "said": {"fuel": {"value": "notsaid", "quote": ""},
+               "local": {"value": "notsaid", "quote": ""},
+               "min": {"value": "notsaid", "quote": ""}},
+      "conditions": [],
+      "quoted_origin": {"place": "Savannah", "country": "", "quote": "Savannah to Callao"},
+      "quoted_dest": {"place": "Callao", "country": "", "quote": "Savannah to Callao"},
+      "notes": ""}
+    ]}
+  ],
+  "files": []
+ }
+}
